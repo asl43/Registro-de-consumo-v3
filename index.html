@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Registro de Consumo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<style>
+    /* Estilos existentes */
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+    
+    :root {
+        --primary: #1e88e5;
+        --secondary: #26a69a;
+        --accent: #ff6f00;
+        --success: #43a047;
+        --error: #e53935;
+        --warning: #fb8c00;
+        --dark: #212121;
+        --light: #f5f5f5;
+        --border: #e0e0e0;
+        --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        --shadow-lg: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    
+    body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+        color: var(--dark);
+    }
+    
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .header {
+        text-align: center;
+        color: white;
+        margin-bottom: 30px;
+        animation: fadeInDown 0.6s ease;
+    }
+    
+    .header h1 {
+        font-size: clamp(28px, 5vw, 42px);
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    
+    .header p {
+        font-size: 16px;
+        opacity: 0.95;
+    }
+    
+    /* Status Bar */
+    .status-bar {
+        background: white;
+        padding: 15px 25px;
+        border-radius: 12px;
+        box-shadow: var(--shadow-lg);
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 15px;
+        animation: fadeIn 0.6s ease;
+    }
+    
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .status-item .material-icons {
+        font-size: 24px;
+        color: var(--primary);
+    }
+    
+    .status-text {
+        font-size: 14px;
+        color: #666;
+    }
+    
+    .status-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--dark);
+    }
+    
+    /* Cards */
+    .card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: var(--shadow);
+        margin-bottom: 25px;
+        animation: fadeInUp 0.6s ease;
+    }
+    
+    .card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--light);
+    }
+    
+    .card-header .material-icons {
+        font-size: 28px;
+        color: var(--primary);
+    }
+    
+    .card-header h2 {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--dark);
+    }
+    
+    /* Forms */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 18px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--dark);
+        margin-bottom: 8px;
+    }
+    
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        font-size: 15px;
+        font-family: inherit;
+        transition: all 0.3s;
+        background: white;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.1);
+    }
+    
+    .form-group input:read-only {
+        background: #f8f9fa;
+        color: #495057;
+        font-weight: 600;
+        cursor: not-allowed;
+    }
+    
+    /* Buttons */
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-decoration: none;
+        white-space: nowrap; /* Impede quebras de linha em botões inline */
+    }
+    
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 4px 12px rgba(30, 136, 229, 0.3);
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+        background: #1976d2;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(30, 136, 229, 0.4);
+    }
+    
+    .btn-primary:disabled {
+        background: #bdbdbd;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .btn-secondary {
+        background: var(--secondary);
+        color: white;
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+        background: #00897b;
+        transform: translateY(-2px);
+    }
+
+    .btn-warning {
+        background: var(--warning);
+        color: white;
+    }
+    
+    .btn-warning:hover:not(:disabled) {
+        background: #f9a825;
+        transform: translateY(-2px);
+    }
+
+    .btn-danger {
+        background: var(--error);
+        color: white;
+        padding: 8px 16px; /* Botões menores para tabela */
+        font-size: 14px;
+    }
+    
+    .btn-danger:hover:not(:disabled) {
+        background: #c62828;
+        transform: translateY(-1px);
+    }
+
+    .btn-edit {
+        background: var(--primary);
+        color: white;
+        padding: 8px 16px; /* Botões menores para tabela */
+        font-size: 14px;
+        margin-right: 8px;
+    }
+    
+    .btn-edit:hover:not(:disabled) {
+        background: #1976d2;
+        transform: translateY(-1px);
+    }
+
+    .btn-icon-only {
+        padding: 8px;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+    }
+    
+    .btn-full {
+        width: 100%;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+    }
+    
+    .stat-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+    
+    .stat-label {
+        font-size: 13px;
+        color: #757575;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--dark);
+    }
+    
+    /* Table */
+    .table-container {
+        overflow-x: auto;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 800px;
+    }
+    
+    table thead {
+        background: var(--dark);
+        color: white;
+    }
+    
+    table thead th {
+        padding: 14px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    table tbody tr {
+        border-bottom: 1px solid var(--border);
+        transition: background 0.2s;
+    }
+    
+    table tbody tr:hover {
+        background: #f5f5f5;
+    }
+    
+    table tbody td {
+        padding: 14px 16px;
+        font-size: 14px;
+    }
+
+    table tbody tr.offline-row {
+        background: #fff8e1; /* Cor de destaque para registros offline */
+        font-weight: 500;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .badge-agua {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+    
+    .badge-energia {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+
+    .badge-offline {
+        background: #ffecb3;
+        color: #ffa000;
+    }
+    
+    /* Alert */
+    .alert {
+        padding: 14px 18px;
+        border-radius: 8px;
+        margin-top: 15px;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    
+    .alert.show {
+        display: flex;
+    }
+    
+    .alert-success {
+        background: #e8f5e9;
+        color: #2e7d32;
+        border-left: 4px solid var(--success);
+    }
+    
+    .alert-error {
+        background: #ffebee;
+        color: #c62828;
+        border-left: 4px solid var(--error);
+    }
+    
+    .alert-warning {
+        background: #fffde7;
+        color: #f57f17;
+        border-left: 4px solid var(--warning);
+    }
+    
+    /* Loading */
+    .loading {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 3px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    /* Modal (Para a edição/visualização) */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+        padding-top: 60px;
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        width: 90%;
+        max-width: 700px;
+        position: relative;
+        animation: fadeIn 0.3s;
+    }
+
+    .close-btn {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close-btn:hover,
+    .close-btn:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        body {
+            padding: 15px;
+        }
+        
+        .card {
+            padding: 20px;
+        }
+        
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .status-bar {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        table {
+             min-width: 600px; /* Adapta a tabela em telas menores */
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>💧⚡ Sistema de Registro de Consumo</h1>
+        <p>Controle inteligente de água e energia com sincronização em tempo real e modo offline</p>
+    </div>
+    
+    <div class="status-bar">
+        <div class="status-item">
+            <span class="material-icons">cloud</span>
+            <div>
+                <div class="status-text">Status da Conexão</div>
+                <div class="status-value" id="connectionStatus">Verificando...</div>
+            </div>
+        </div>
+        <div class="status-item">
+            <span class="material-icons">update</span>
+            <div>
+                <div class="status-text">Última Atualização</div>
+                <div class="status-value" id="lastUpdate">--:--</div>
+            </div>
+        </div>
+        <div class="status-item">
+            <span class="material-icons">storage</span>
+            <div>
+                <div class="status-text">Total de Registros (Online)</div>
+                <div class="status-value" id="totalRecords">0</div>
+            </div>
+        </div>
+        <div class="status-item">
+            <span class="material-icons" style="color: var(--warning);">save</span>
+            <div>
+                <div class="status-text">Registros Pendentes (Offline)</div>
+                <div class="status-value" id="pendingRecordsCount">0</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <span class="material-icons">settings</span>
+            <h2>Configuração do Sistema</h2>
+        </div>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label>🔗 URL do Google Apps Script</label>
+                <input type="url" id="scriptURL" placeholder="https://script.google.com/macros/s/.../exec">
+            </div>
+            <div class="form-group">
+                <label>📊 ID da Planilha Google Sheets</label>
+                <input type="text" id="sheetID" placeholder="ID da planilha (encontrado na URL)">
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="salvarConfiguracao()">
+                <span class="material-icons" style="font-size: 18px;">save</span>
+                Salvar Configuração
+            </button>
+            <button class="btn btn-secondary" onclick="testarConexao()">
+                <span class="material-icons" style="font-size: 18px;">sync</span>
+                Testar Conexão
+            </button>
+        </div>
+        
+        <div class="alert" id="configAlert"></div>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">💧</div>
+            <div class="stat-label">Total Água</div>
+            <div class="stat-value" id="totalAgua">0.00 m³</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-label">Total Energia</div>
+            <div class="stat-value" id="totalEnergia">0.00 kWh</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-label">Consumo Hoje (Água)</div>
+            <div class="stat-value" id="consumoHojeAgua">0.00 m³</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div class="stat-label">Consumo Hoje (Energia)</div>
+            <div class="stat-value" id="consumoHojeEnergia">0.00 kWh</div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <span class="material-icons">water_drop</span>
+            <h2>Registro de Consumo de Água</h2>
+        </div>
+        
+        <form id="aguaForm" onsubmit="handleSubmit(event, 'agua')">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nome Completo *</label>
+                    <input type="text" name="nome" required placeholder="Digite o nome completo">
+                </div>
+                <div class="form-group">
+                    <label>Matrícula Residencial *</label>
+                    <input type="text" name="matricula" required placeholder="Digite a matrícula">
+                </div>
+                <div class="form-group">
+                    <label>Data e Hora *</label>
+                    <input type="datetime-local" name="dataHora" id="dataHoraAgua" required>
+                </div>
+                <div class="form-group">
+                    <label>Leitura Anterior (m³)</label>
+                    <input type="number" id="leituraAnteriorAgua" step="0.01" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Leitura Atual do Medidor (m³) *</label>
+                    <input type="number" name="leituraAtual" id="leituraAtualAgua" step="0.01" required placeholder="0.00" oninput="calcularConsumo('agua')">
+                </div>
+                <div class="form-group">
+                    <label>Consumo Total Calculado (m³)</label>
+                    <input type="number" name="consumoTotal" id="consumoTotalAgua" step="0.01" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Extra 1 (Opcional)</label>
+                    <input type="text" name="extra1" placeholder="Campo adicional 1">
+                </div>
+                <div class="form-group">
+                    <label>Extra 2 (Opcional)</label>
+                    <input type="text" name="extra2" placeholder="Campo adicional 2">
+                </div>
+                <div class="form-group">
+                    <label>Extra 3 (Opcional)</label>
+                    <input type="text" name="extra3" placeholder="Campo adicional 3">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top: 20px;">
+                <span class="material-icons">send</span>
+                Registrar Consumo de Água
+            </button>
+            
+            <div class="alert" id="alertAgua"></div>
+        </form>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <span class="material-icons">bolt</span>
+            <h2>Registro de Consumo de Energia</h2>
+        </div>
+        
+        <form id="energiaForm" onsubmit="handleSubmit(event, 'energia')">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nome Completo *</label>
+                    <input type="text" name="nome" required placeholder="Digite o nome completo">
+                </div>
+                <div class="form-group">
+                    <label>Matrícula Residencial *</label>
+                    <input type="text" name="matricula" required placeholder="Digite a matrícula">
+                </div>
+                <div class="form-group">
+                    <label>Data e Hora *</label>
+                    <input type="datetime-local" name="dataHora" id="dataHoraEnergia" required>
+                </div>
+                <div class="form-group">
+                    <label>Leitura Anterior (kWh)</label>
+                    <input type="number" id="leituraAnteriorEnergia" step="0.01" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Leitura Atual do Medidor (kWh) *</label>
+                    <input type="number" name="leituraAtual" id="leituraAtualEnergia" step="0.01" required placeholder="0.00" oninput="calcularConsumo('energia')">
+                </div>
+                <div class="form-group">
+                    <label>Consumo Total Calculado (kWh)</label>
+                    <input type="number" name="consumoTotal" id="consumoTotalEnergia" step="0.01" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Extra 1 (Opcional)</label>
+                    <input type="text" name="extra1" placeholder="Campo adicional 1">
+                </div>
+                <div class="form-group">
+                    <label>Extra 2 (Opcional)</label>
+                    <input type="text" name="extra2" placeholder="Campo adicional 2">
+                </div>
+                <div class="form-group">
+                    <label>Extra 3 (Opcional)</label>
+                    <input type="text" name="extra3" placeholder="Campo adicional 3">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top: 20px; background: var(--accent);">
+                <span class="material-icons">send</span>
+                Registrar Consumo de Energia
+            </button>
+            
+            <div class="alert" id="alertEnergia"></div>
+        </form>
+    </div>
+
+    <div class="card" id="pendingRecordsCard" style="display: none;">
+        <div class="card-header" style="border-bottom-color: var(--warning);">
+            <span class="material-icons" style="color: var(--warning);">warning</span>
+            <h2>Registros Pendentes (Offline) <span id="pendingCountBadge" class="badge badge-offline">0</span></h2>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button class="btn btn-warning" onclick="sincronizarRegistrosPendentes()">
+                <span class="material-icons">cloud_upload</span>
+                Sincronizar Registros Pendentes
+            </button>
+            <button class="btn btn-danger" onclick="limparRegistrosPendentes()">
+                <span class="material-icons">delete_forever</span>
+                Limpar Todos
+            </button>
+        </div>
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Data/Hora</th>
+                        <th>Nome</th>
+                        <th>Matrícula</th>
+                        <th style="text-align: right;">Leitura Atual</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="registrosPendentesBody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                            Nenhum registro offline pendente.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="alert" id="syncAlert"></div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <span class="material-icons">history</span>
+            <h2>Histórico de Registros (Online)</h2>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <select id="filtroTipo" style="padding: 10px; border: 2px solid var(--border); border-radius: 8px;">
+                <option value="all">Todos os Tipos</option>
+                <option value="agua">Apenas Água</option>
+                <option value="energia">Apenas Energia</option>
+            </select>
+            <button class="btn btn-secondary" onclick="carregarHistorico()">
+                <span class="material-icons">refresh</span>
+                Atualizar Histórico Online
+            </button>
+        </div>
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Data/Hora</th>
+                        <th>Nome</th>
+                        <th>Matrícula</th>
+                        <th style="text-align: right;">Leitura Anterior</th>
+                        <th style="text-align: right;">Leitura Atual</th>
+                        <th style="text-align: right;">Consumo</th>
+                    </tr>
+                </thead>
+                <tbody id="historicoBody">
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                            Nenhum registro encontrado. Faça o primeiro registro!
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="fecharModal()">&times;</span>
+        <h2>Editar Registro Offline</h2>
+        <form id="editForm" onsubmit="salvarEdicao(event)">
+            <input type="hidden" id="editIndex">
+            <input type="hidden" id="editTipo">
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nome Completo *</label>
+                    <input type="text" id="editNome" required>
+                </div>
+                <div class="form-group">
+                    <label>Matrícula Residencial *</label>
+                    <input type="text" id="editMatricula" required>
+                </div>
+                <div class="form-group">
+                    <label>Data e Hora *</label>
+                    <input type="datetime-local" id="editDataHora" required>
+                </div>
+                <div class="form-group">
+                    <label id="labelLeituraAnterior">Leitura Anterior (m³)</label>
+                    <input type="number" id="editLeituraAnterior" step="0.01" readonly>
+                </div>
+                <div class="form-group">
+                    <label id="labelLeituraAtual">Leitura Atual do Medidor (m³) *</label>
+                    <input type="number" id="editLeituraAtual" step="0.01" required oninput="calcularConsumoModal()">
+                </div>
+                <div class="form-group">
+                    <label id="labelConsumoTotal">Consumo Total Calculado (m³)</label>
+                    <input type="number" id="editConsumoTotal" step="0.01" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Extra 1 (Opcional)</label>
+                    <input type="text" id="editExtra1">
+                </div>
+                <div class="form-group">
+                    <label>Extra 2 (Opcional)</label>
+                    <input type="text" id="editExtra2">
+                </div>
+                <div class="form-group">
+                    <label>Extra 3 (Opcional)</label>
+                    <input type="text" id="editExtra3">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top: 20px;">
+                <span class="material-icons">save</span>
+                Salvar Edição
+            </button>
+            <div class="alert" id="alertEditModal"></div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Variáveis globais
+let scriptURL = '';
+let sheetID = '';
+let leituraAnteriorAgua = 0;
+let leituraAnteriorEnergia = 0;
+let isProcessing = false;
+
+// Inicialização
+window.onload = function() {
+    carregarConfiguracao();
+    setDataHoraAtual();
+    setInterval(atualizarRelogio, 1000);
+    
+    // Carrega dados salvos de nome e matrícula
+    const nomeInput = document.querySelectorAll('input[name="nome"]');
+    const matriculaInput = document.querySelectorAll('input[name="matricula"]');
+    
+    const ultimoNome = localStorage.getItem('ultimoNome') || '';
+    const ultimaMatricula = localStorage.getItem('ultimaMatricula') || '';
+    
+    nomeInput.forEach(input => input.value = ultimoNome);
+    matriculaInput.forEach(input => input.value = ultimaMatricula);
+    
+    if (scriptURL && sheetID) {
+        carregarDados();
+    }
+
+    carregarRegistrosPendentes(); // Carrega os registros offline
+};
+
+// --- Funções de Configuração e Status ---
+
+// Define data e hora atual
+function setDataHoraAtual() {
+    const now = new Date();
+    const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.getElementById('dataHoraAgua').value = localDate;
+    document.getElementById('dataHoraEnergia').value = localDate;
+}
+
+// Atualiza relógio
+function atualizarRelogio() {
+    const now = new Date();
+    document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('pt-BR');
+}
+
+// Carrega configuração
+function carregarConfiguracao() {
+    scriptURL = localStorage.getItem('scriptURL') || '';
+    sheetID = localStorage.getItem('sheetID') || '';
+    
+    document.getElementById('scriptURL').value = scriptURL;
+    document.getElementById('sheetID').value = sheetID;
+    
+    if (scriptURL && sheetID) {
+        document.getElementById('connectionStatus').textContent = 'Conectado';
+        document.getElementById('connectionStatus').style.color = 'var(--success)';
+    } else {
+        document.getElementById('connectionStatus').textContent = 'Não Configurado';
+        document.getElementById('connectionStatus').style.color = 'var(--error)';
+    }
+}
+
+// Salva configuração
+function salvarConfiguracao() {
+    const urlInput = document.getElementById('scriptURL').value.trim();
+    const idInput = document.getElementById('sheetID').value.trim();
+    
+    if (!urlInput || !idInput) {
+        mostrarAlerta('configAlert', 'Por favor, preencha todos os campos de configuração!', 'error');
+        return;
+    }
+    
+    if (!urlInput.includes('/exec')) {
+        mostrarAlerta('configAlert', 'A URL do Apps Script deve terminar com /exec', 'error');
+        return;
+    }
+    
+    localStorage.setItem('scriptURL', urlInput);
+    localStorage.setItem('sheetID', idInput);
+    
+    scriptURL = urlInput;
+    sheetID = idInput;
+    
+    document.getElementById('connectionStatus').textContent = 'Conectado';
+    document.getElementById('connectionStatus').style.color = 'var(--success)';
+    
+    mostrarAlerta('configAlert', 'Configuração salva com sucesso!', 'success');
+
+    // Recarrega dados online após salvar a configuração
+    if (scriptURL && sheetID) {
+        carregarDados();
+    }
+}
+
+// Testa conexão
+async function testarConexao() {
+    if (!scriptURL || !sheetID) {
+        mostrarAlerta('configAlert', 'Configure primeiro o sistema!', 'error');
+        return;
+    }
+    
+    try {
+        document.getElementById('connectionStatus').textContent = 'Testando...';
+        
+        const response = await fetch(`${scriptURL}?action=test&sheetId=${sheetID}`);
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            mostrarAlerta('configAlert', 'Conexão estabelecida com sucesso!', 'success');
+            document.getElementById('connectionStatus').textContent = 'Conectado';
+            document.getElementById('connectionStatus').style.color = 'var(--success)';
+            carregarDados();
+        } else {
+            throw new Error(data.message || 'Erro na conexão');
+        }
+    } catch (error) {
+        mostrarAlerta('configAlert', 'Erro ao conectar: ' + error.message, 'error');
+        document.getElementById('connectionStatus').textContent = 'Erro';
+        document.getElementById('connectionStatus').style.color = 'var(--error)';
+    }
+}
+
+// --- Funções de Dados Online (Google Sheets) ---
+
+// Carrega todos os dados
+async function carregarDados() {
+    await carregarUltimasLeituras();
+    await carregarHistorico();
+}
+
+// Carrega últimas leituras
+async function carregarUltimasLeituras() {
+    try {
+        const response = await fetch(`${scriptURL}?action=getLastReadings&sheetId=${sheetID}`);
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            leituraAnteriorAgua = parseFloat(data.agua || 0);
+            leituraAnteriorEnergia = parseFloat(data.energia || 0);
+            
+            document.getElementById('leituraAnteriorAgua').value = leituraAnteriorAgua.toFixed(2);
+            document.getElementById('leituraAnteriorEnergia').value = leituraAnteriorEnergia.toFixed(2);
+            document.getElementById('leituraAtualAgua').value = leituraAnteriorAgua.toFixed(2);
+            document.getElementById('leituraAtualEnergia').value = leituraAnteriorEnergia.toFixed(2);
+            
+            document.getElementById('totalAgua').textContent = leituraAnteriorAgua.toFixed(2) + ' m³';
+            document.getElementById('totalEnergia').textContent = leituraAnteriorEnergia.toFixed(2) + ' kWh';
+            
+            if (data.consumoHoje) {
+                document.getElementById('consumoHojeAgua').textContent = parseFloat(data.consumoHoje.agua || 0).toFixed(2) + ' m³';
+                document.getElementById('consumoHojeEnergia').textContent = parseFloat(data.consumoHoje.energia || 0).toFixed(2) + ' kWh';
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar leituras:', error);
+        // Não mostrar erro no alerta geral para não ser muito intrusivo
+    }
+}
+
+// Carrega histórico
+async function carregarHistorico() {
+    if (!scriptURL || !sheetID) {
+        console.warn('Configuração de URL ou ID da Planilha ausente. Impossível carregar histórico online.');
+        document.getElementById('totalRecords').textContent = '0';
+        return;
+    }
+    
+    try {
+        const filtro = document.getElementById('filtroTipo').value;
+        const response = await fetch(`${scriptURL}?action=getHistory&sheetId=${sheetID}&tipo=${filtro}`);
+        const data = await response.json();
+        
+        const tbody = document.getElementById('historicoBody');
+        
+        if (data.status === 'success' && data.registros && data.registros.length > 0) {
+            tbody.innerHTML = '';
+            
+            let totalRegistros = 0;
+            
+            data.registros.forEach(reg => {
+                totalRegistros++;
+                
+                const row = tbody.insertRow();
+                const tipo = String(reg.tipo || '').toLowerCase();
+                const unit = tipo === 'agua' ? 'm³' : 'kWh';
+                
+                // Formata data
+                let dataFormatada = 'Data Inválida';
+                if (reg.dataHora) {
+                    try {
+                        const d = new Date(reg.dataHora);
+                        if (!isNaN(d.getTime())) {
+                            dataFormatada = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        }
+                    } catch (e) {
+                        console.error('Erro ao formatar data:', e);
+                    }
+                }
+                
+                row.innerHTML = `
+                    <td><span class="badge badge-${tipo}">${tipo === 'agua' ? '💧 Água' : '⚡ Energia'}</span></td>
+                    <td>${dataFormatada}</td>
+                    <td>${String(reg.nome || 'N/A')}</td>
+                    <td>${String(reg.matricula || 'N/A')}</td>
+                    <td style="text-align: right;">${parseFloat(reg.leituraAnterior || 0).toFixed(2)} ${unit}</td>
+                    <td style="text-align: right; font-weight: 600;">${parseFloat(reg.leituraAtual || 0).toFixed(2)} ${unit}</td>
+                    <td style="text-align: right; color: var(--success); font-weight: 600;">+${parseFloat(reg.consumoTotal || 0).toFixed(2)} ${unit}</td>
+                `;
+            });
+            
+            document.getElementById('totalRecords').textContent = totalRegistros;
+            
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                        Nenhum registro encontrado. Faça o primeiro registro!
+                    </td>
+                </tr>
+            `;
+            document.getElementById('totalRecords').textContent = '0';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        document.getElementById('historicoBody').innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 40px; color: var(--error);">
+                    ❌ Erro ao carregar histórico. Verifique a conexão e configuração.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// --- Funções de Lógica e Formulário ---
+
+// Calcula consumo
+function calcularConsumo(tipo) {
+    const leituraAtual = parseFloat(document.getElementById(`leituraAtual${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).value) || 0;
+    const leituraAnterior = tipo === 'agua' ? leituraAnteriorAgua : leituraAnteriorEnergia;
+    
+    const consumo = Math.max(0, leituraAtual - leituraAnterior);
+    document.getElementById(`consumoTotal${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).value = consumo.toFixed(2);
+}
+
+// Envia formulário - Adaptado para salvar offline se houver erro
+async function handleSubmit(event, tipo) {
+    event.preventDefault();
+    
+    if (isProcessing) {
+        mostrarAlerta(`alert${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, 'Aguarde o envio anterior ser concluído!', 'error');
+        return;
+    }
+    
+    isProcessing = true;
+    const form = event.target;
+    const btn = form.querySelector('button[type="submit"]');
+    const originalHTML = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loading"></div> Enviando...';
+
+    // 1. Coleta dados do formulário
+    const formData = new FormData(form);
+    const dataToSend = {
+        tipo: tipo,
+        nome: formData.get('nome'),
+        matricula: formData.get('matricula'),
+        dataHora: formData.get('dataHora'),
+        leituraAnterior: tipo === 'agua' ? leituraAnteriorAgua.toFixed(2) : leituraAnteriorEnergia.toFixed(2),
+        leituraAtual: parseFloat(formData.get('leituraAtual') || 0).toFixed(2),
+        consumoTotal: parseFloat(formData.get('consumoTotal') || 0).toFixed(2),
+        extra1: formData.get('extra1') || '',
+        extra2: formData.get('extra2') || '',
+        extra3: formData.get('extra3') || '',
+        timestamp: new Date().toISOString() // Adiciona um timestamp para ordenação/id
+    };
+
+    // Salva nome e matrícula no local storage para o próximo uso
+    localStorage.setItem('ultimoNome', dataToSend.nome);
+    localStorage.setItem('ultimaMatricula', dataToSend.matricula);
+
+    let success = false;
+
+    if (scriptURL && sheetID) {
+        try {
+            // Tenta enviar online
+            const onlineFormData = new FormData();
+            onlineFormData.append('action', 'addRecord');
+            onlineFormData.append('tipo', tipo);
+            onlineFormData.append('sheetId', sheetID);
+
+            for (const key in dataToSend) {
+                if (key !== 'tipo' && key !== 'timestamp') { // Não envia o timestamp local
+                    onlineFormData.append(key, dataToSend[key]);
+                }
+            }
+            
+            const response = await fetch(scriptURL, {
+                method: 'POST',
+                body: onlineFormData
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                mostrarAlerta(`alert${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, '✅ Registro salvo ONLINE com sucesso!', 'success');
+                success = true;
+            } else {
+                // Se falhar a comunicação com o Apps Script, salva offline
+                throw new Error(result.message || 'Erro ao salvar online, salvando offline...');
+            }
+        } catch (error) {
+            console.error('Falha no envio online. Salvando offline.', error);
+            salvarRegistroOffline(dataToSend);
+            mostrarAlerta(`alert${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, `⚠️ Falha no envio ONLINE. Registro salvo OFFLINE. ${error.message}`, 'warning');
+        }
+    } else {
+        // Se não houver URL configurada, salva offline
+        salvarRegistroOffline(dataToSend);
+        mostrarAlerta(`alert${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, '⚠️ Sistema não configurado. Registro salvo OFFLINE.', 'warning');
+    }
+    
+    // Limpa formulário (mantendo nome e matrícula) e recarrega dados (online e offline)
+    if (success) {
+        await carregarDados(); // Recarrega dados online
+    }
+    carregarRegistrosPendentes(); // Recarrega registros offline
+    
+    const nome = dataToSend.nome;
+    const matricula = dataToSend.matricula;
+    form.reset();
+    form.querySelector('input[name="nome"]').value = nome;
+    form.querySelector('input[name="matricula"]').value = matricula;
+    setDataHoraAtual();
+
+    isProcessing = false;
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+
+    // Recarrega as leituras anteriores para o próximo registro
+    carregarUltimasLeituras();
+}
+
+// --- Funções de Local Storage (Offline) ---
+
+// Carrega registros offline do localStorage
+function getRegistrosOffline() {
+    const json = localStorage.getItem('registrosOffline');
+    return json ? JSON.parse(json) : [];
+}
+
+// Salva array de registros offline no localStorage
+function setRegistrosOffline(registros) {
+    localStorage.setItem('registrosOffline', JSON.stringify(registros));
+    carregarRegistrosPendentes(); // Atualiza a interface
+}
+
+// Adiciona um registro ao array offline
+function salvarRegistroOffline(registro) {
+    const registros = getRegistrosOffline();
+    registros.push(registro);
+    setRegistrosOffline(registros);
+}
+
+// Carrega e exibe registros pendentes na tabela
+function carregarRegistrosPendentes() {
+    const registros = getRegistrosOffline();
+    const tbody = document.getElementById('registrosPendentesBody');
+    const card = document.getElementById('pendingRecordsCard');
+    const badge = document.getElementById('pendingCountBadge');
+
+    badge.textContent = registros.length;
+    card.style.display = registros.length > 0 ? 'block' : 'none';
+    
+    if (registros.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                    Nenhum registro offline pendente.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = '';
+    registros.forEach((reg, index) => {
+        const row = tbody.insertRow();
+        row.classList.add('offline-row');
+        const tipo = String(reg.tipo || '').toLowerCase();
+        const unit = tipo === 'agua' ? 'm³' : 'kWh';
+
+        // Formata data
+        let dataFormatada = 'Data Inválida';
+        if (reg.dataHora) {
+            try {
+                const d = new Date(reg.dataHora);
+                if (!isNaN(d.getTime())) {
+                    dataFormatada = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                }
+            } catch (e) {
+                console.error('Erro ao formatar data:', e);
+            }
+        }
+        
+        row.innerHTML = `
+            <td><span class="badge badge-offline">${tipo === 'agua' ? '💧 Água' : '⚡ Energia'}</span></td>
+            <td>${dataFormatada}</td>
+            <td>${String(reg.nome || 'N/A')}</td>
+            <td>${String(reg.matricula || 'N/A')}</td>
+            <td style="text-align: right; font-weight: 600;">${parseFloat(reg.leituraAtual || 0).toFixed(2)} ${unit}</td>
+            <td>
+                <button class="btn btn-edit" onclick="abrirModalEdicao(${index})">
+                    <span class="material-icons" style="font-size: 14px;">edit</span>
+                    Editar
+                </button>
+                <button class="btn btn-danger" onclick="excluirRegistroOffline(${index})">
+                    <span class="material-icons" style="font-size: 14px;">delete</span>
+                    Excluir
+                </button>
+            </td>
+        `;
+    });
+}
+
+// Excluir um registro offline
+function excluirRegistroOffline(index) {
+    if (!confirm('Tem certeza de que deseja excluir este registro offline? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+    const registros = getRegistrosOffline();
+    registros.splice(index, 1);
+    setRegistrosOffline(registros);
+}
+
+// Sincroniza todos os registros pendentes
+async function sincronizarRegistrosPendentes() {
+    if (isProcessing) {
+        mostrarAlerta('syncAlert', 'Aguarde a sincronização anterior ser concluída!', 'error');
+        return;
+    }
+
+    if (!scriptURL || !sheetID) {
+        mostrarAlerta('syncAlert', 'Configure o sistema (URL e ID) primeiro!', 'error');
+        return;
+    }
+
+    const registros = getRegistrosOffline();
+    if (registros.length === 0) {
+        mostrarAlerta('syncAlert', 'Não há registros pendentes para sincronizar!', 'warning');
+        return;
+    }
+
+    isProcessing = true;
+    const btn = document.querySelector('.btn-warning');
+    const originalHTML = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loading"></div> Sincronizando...';
+
+    const payload = registros.map(reg => ({
+        tipo: reg.tipo,
+        nome: reg.nome,
+        matricula: reg.matricula,
+        dataHora: reg.dataHora,
+        leituraAnterior: reg.leituraAnterior,
+        leituraAtual: reg.leituraAtual,
+        consumoTotal: reg.consumoTotal,
+        extra1: reg.extra1,
+        extra2: reg.extra2,
+        extra3: reg.extra3,
+    }));
+
+    try {
+        const response = await fetch(`${scriptURL}?action=addBatchRecords&sheetId=${sheetID}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ records: payload })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            setRegistrosOffline([]); // Limpa todos após o sucesso
+            mostrarAlerta('syncAlert', `✅ ${result.count || registros.length} registros sincronizados com sucesso!`, 'success');
+            await carregarDados(); // Recarrega dados online
+        } else {
+            throw new Error(result.message || 'Erro desconhecido ao sincronizar em lote.');
+        }
+
+    } catch (error) {
+        mostrarAlerta('syncAlert', '❌ Erro na sincronização: ' + error.message, 'error');
+        console.error('Erro de sincronização:', error);
+    } finally {
+        isProcessing = false;
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        carregarRegistrosPendentes();
+    }
+}
+
+// Limpa todos os registros pendentes
+function limparRegistrosPendentes() {
+    if (!confirm('ATENÇÃO: Você tem certeza de que deseja EXCLUIR TODOS os registros pendentes? Eles serão PERDIDOS definitivamente.')) {
+        return;
+    }
+    setRegistrosOffline([]);
+    mostrarAlerta('syncAlert', 'Todos os registros pendentes foram excluídos.', 'warning');
+}
+
+// --- Funções do Modal de Edição ---
+
+// Abre o modal de edição
+function abrirModalEdicao(index) {
+    const registros = getRegistrosOffline();
+    const reg = registros[index];
+    const tipo = reg.tipo;
+    const unit = tipo === 'agua' ? 'm³' : 'kWh';
+
+    document.getElementById('editIndex').value = index;
+    document.getElementById('editTipo').value = tipo;
+    
+    // Atualiza labels para o tipo correto
+    document.getElementById('labelLeituraAnterior').textContent = `Leitura Anterior (${unit})`;
+    document.getElementById('labelLeituraAtual').textContent = `Leitura Atual do Medidor (${unit}) *`;
+    document.getElementById('labelConsumoTotal').textContent = `Consumo Total Calculado (${unit})`;
+
+    document.getElementById('editNome').value = reg.nome;
+    document.getElementById('editMatricula').value = reg.matricula;
+    document.getElementById('editDataHora').value = reg.dataHora.slice(0, 16); // Remove segundos/timezone
+    document.getElementById('editLeituraAnterior').value = reg.leituraAnterior;
+    document.getElementById('editLeituraAtual').value = reg.leituraAtual;
+    document.getElementById('editConsumoTotal').value = reg.consumoTotal;
+    document.getElementById('editExtra1').value = reg.extra1;
+    document.getElementById('editExtra2').value = reg.extra2;
+    document.getElementById('editExtra3').value = reg.extra3;
+    
+    document.getElementById('editModal').style.display = 'block';
+}
+
+// Calcula consumo dentro do modal
+function calcularConsumoModal() {
+    const leituraAtual = parseFloat(document.getElementById('editLeituraAtual').value) || 0;
+    const leituraAnterior = parseFloat(document.getElementById('editLeituraAnterior').value) || 0;
+    
+    const consumo = Math.max(0, leituraAtual - leituraAnterior);
+    document.getElementById('editConsumoTotal').value = consumo.toFixed(2);
+}
+
+// Salva a edição do registro
+function salvarEdicao(event) {
+    event.preventDefault();
+
+    const index = parseInt(document.getElementById('editIndex').value);
+    const tipo = document.getElementById('editTipo').value;
+    const registros = getRegistrosOffline();
+    
+    // Calcula novamente o consumo antes de salvar
+    calcularConsumoModal();
+
+    const registroEditado = {
+        tipo: tipo,
+        nome: document.getElementById('editNome').value,
+        matricula: document.getElementById('editMatricula').value,
+        dataHora: document.getElementById('editDataHora').value,
+        leituraAnterior: parseFloat(document.getElementById('editLeituraAnterior').value).toFixed(2),
+        leituraAtual: parseFloat(document.getElementById('editLeituraAtual').value).toFixed(2),
+        consumoTotal: parseFloat(document.getElementById('editConsumoTotal').value).toFixed(2),
+        extra1: document.getElementById('editExtra1').value,
+        extra2: document.getElementById('editExtra2').value,
+        extra3: document.getElementById('editExtra3').value,
+        timestamp: registros[index].timestamp // Mantém o timestamp original
+    };
+
+    registros[index] = registroEditado;
+    setRegistrosOffline(registros);
+    mostrarAlerta('alertEditModal', 'Registro atualizado com sucesso no modo offline!', 'success');
+    
+    setTimeout(() => {
+        fecharModal();
+    }, 1500);
+}
+
+// Fecha o modal de edição
+function fecharModal() {
+    document.getElementById('editModal').style.display = 'none';
+    document.getElementById('alertEditModal').classList.remove('show');
+}
+
+// Fecha modal ao clicar fora
+window.onclick = function(event) {
+    const modal = document.getElementById('editModal');
+    if (event.target === modal) {
+        fecharModal();
+    }
+}
+
+
+// --- Funções de Utilitário ---
+
+// Mostra alerta
+function mostrarAlerta(elementId, mensagem, tipo) {
+    const alert = document.getElementById(elementId);
+    alert.className = `alert alert-${tipo} show`;
+    alert.innerHTML = `
+        <span class="material-icons">${tipo === 'success' ? 'check_circle' : (tipo === 'warning' ? 'warning' : 'error')}</span>
+        ${mensagem}
+    `;
+    
+    setTimeout(() => {
+        alert.classList.remove('show');
+    }, 8000); // Aumentei o tempo para mensagens offline/sincronização
+}
+
+// Listener para atualizar histórico ao mudar filtro
+document.getElementById('filtroTipo').addEventListener('change', carregarHistorico);
+</script>
+
+</body>
+</html>
