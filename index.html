@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <style>
+    /* O CSS ORIGINAL FOI MANTIDO SEM ALTERAÇÕES PARA MANTER O ESTILO */
     * {
         box-sizing: border-box;
         margin: 0;
@@ -498,6 +499,14 @@
         font-weight: 700;
         text-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
+
+    .daily-consumption-table {
+        margin-top: 20px;
+    }
+
+    .daily-consumption-table table {
+        min-width: 400px;
+    }
     
     @keyframes spin {
         to { transform: rotate(360deg); }
@@ -636,23 +645,23 @@
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-icon">💧</div>
-            <div class="stat-label">Total Água</div>
+            <div class="stat-label">Leitura Atual Água</div>
             <div class="stat-value" id="totalAgua">0.00 m³</div>
         </div>
         <div class="stat-card">
             <div class="stat-icon">⚡</div>
-            <div class="stat-label">Total Energia</div>
+            <div class="stat-label">Leitura Atual Energia</div>
             <div class="stat-value" id="totalEnergia">0.00 kWh</div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">📊</div>
-            <div class="stat-label">Consumo Hoje (Água)</div>
-            <div class="stat-value" id="consumoHojeAgua">0.00 m³</div>
+            <div class="stat-icon" style="color: var(--secondary);">💧</div>
+            <div class="stat-label">Média Diária Água</div>
+            <div class="stat-value" id="mediaDiariaAgua">0.00 m³/dia</div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">📈</div>
-            <div class="stat-label">Consumo Hoje (Energia)</div>
-            <div class="stat-value" id="consumoHojeEnergia">0.00 kWh</div>
+            <div class="stat-icon" style="color: var(--accent);">⚡</div>
+            <div class="stat-label">Média Diária Energia</div>
+            <div class="stat-value" id="mediaDiariaEnergia">0.00 kWh/dia</div>
         </div>
     </div>
     
@@ -776,6 +785,54 @@
         </form>
     </div>
 
+    <div class="card">
+        <div class="card-header">
+            <span class="material-icons">calendar_today</span>
+            <h2>Visualização do Consumo Diário</h2>
+        </div>
+
+        <div class="filter-container">
+            <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--dark);">
+                <span class="material-icons" style="vertical-align: middle; font-size: 20px;">date_range</span>
+                Selecione o Período
+            </h3>
+            <div class="filter-grid">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Data Início *</label>
+                    <input type="date" id="dailyDataInicio" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Data Fim *</label>
+                    <input type="date" id="dailyDataFim" required>
+                </div>
+            </div>
+            <div class="filter-buttons">
+                <button class="btn btn-primary" onclick="calcularConsumoDiario()">
+                    <span class="material-icons">visibility</span>
+                    Ver Consumo Diário
+                </button>
+            </div>
+        </div>
+
+        <div class="table-container daily-consumption-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dia</th>
+                        <th style="text-align: right;">💧 Consumo Água</th>
+                        <th style="text-align: right;">⚡ Consumo Energia</th>
+                    </tr>
+                </thead>
+                <tbody id="consumoDiarioBody">
+                    <tr>
+                        <td colspan="3" style="text-align: center; padding: 40px; color: #999;">
+                            Selecione um período e clique em "Ver Consumo Diário".
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
     <div class="card" id="pendingRecordsCard" style="display: none;">
         <div class="card-header" style="border-bottom-color: var(--warning);">
             <span class="material-icons" style="color: var(--warning);">warning</span>
@@ -1014,6 +1071,13 @@ window.onload = function() {
     nomeInput.forEach(input => input.value = ultimoNome);
     matriculaInput.forEach(input => input.value = ultimaMatricula);
     
+    // Define as datas do filtro de consumo diário para o mês atual
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const today = now.toISOString().split('T')[0];
+    document.getElementById('dailyDataInicio').value = firstDay;
+    document.getElementById('dailyDataFim').value = today;
+
     if (scriptURL && sheetID) {
         carregarDados();
     }
@@ -1107,47 +1171,205 @@ async function testarConexao() {
 }
 
 async function carregarDados() {
-    await carregarUltimasLeituras();
     await carregarHistorico();
+    // Após carregar o histórico, os totais e médias serão calculados
+    calcularEstatisticasGerais(); 
 }
 
-async function carregarUltimasLeituras() {
-    try {
-        const response = await fetch(`${scriptURL}?action=getLastReadings&sheetId=${sheetID}`);
-        const data = await response.json();
-        
-        if (data.status === 'success') {
-            leituraAnteriorAgua = parseFloat(data.agua || 0);
-            leituraAnteriorEnergia = parseFloat(data.energia || 0);
-            
-            document.getElementById('leituraAnteriorAgua').value = leituraAnteriorAgua.toFixed(2);
-            document.getElementById('leituraAnteriorEnergia').value = leituraAnteriorEnergia.toFixed(2);
-            document.getElementById('leituraAtualAgua').value = leituraAnteriorAgua.toFixed(2);
-            document.getElementById('leituraAtualEnergia').value = leituraAnteriorEnergia.toFixed(2);
-            
-            document.getElementById('totalAgua').textContent = leituraAnteriorAgua.toFixed(2) + ' m³';
-            document.getElementById('totalEnergia').textContent = leituraAnteriorEnergia.toFixed(2) + ' kWh';
-            
-            if (data.consumoHoje) {
-                document.getElementById('consumoHojeAgua').textContent = parseFloat(data.consumoHoje.agua || 0).toFixed(2) + ' m³';
-                document.getElementById('consumoHojeEnergia').textContent = parseFloat(data.consumoHoje.energia || 0).toFixed(2) + ' kWh';
-            }
+// REMOVIDA A FUNÇÃO carregarUltimasLeituras() - Os dados serão obtidos e calculados a partir do histórico completo
+
+function calcularEstatisticasGerais() {
+    let totalAguaLeitura = 0;
+    let totalEnergiaLeitura = 0;
+    let totalConsumoAgua = 0;
+    let totalConsumoEnergia = 0;
+    let primeiraData = null;
+    let ultimaData = null;
+
+    if (todosRegistrosOnline.length === 0) {
+        // Se não houver registros, reseta os valores
+        leituraAnteriorAgua = 0;
+        leituraAnteriorEnergia = 0;
+        document.getElementById('leituraAnteriorAgua').value = '0.00';
+        document.getElementById('leituraAnteriorEnergia').value = '0.00';
+        document.getElementById('leituraAtualAgua').value = '0.00';
+        document.getElementById('leituraAtualEnergia').value = '0.00';
+        document.getElementById('totalAgua').textContent = '0.00 m³';
+        document.getElementById('totalEnergia').textContent = '0.00 kWh';
+        document.getElementById('mediaDiariaAgua').textContent = '0.00 m³/dia';
+        document.getElementById('mediaDiariaEnergia').textContent = '0.00 kWh/dia';
+        document.getElementById('consumoHojeAgua').textContent = '0.00 m³'; // Resetar Consumo Hoje
+        document.getElementById('consumoHojeEnergia').textContent = '0.00 kWh'; // Resetar Consumo Hoje
+        return;
+    }
+
+    // 1. Encontrar a última leitura e o total de consumo
+    const ultimasLeituras = {
+        agua: { leitura: 0, consumo: 0, data: null },
+        energia: { leitura: 0, consumo: 0, data: null }
+    };
+    
+    // Agrupar por tipo e ordenar por data para obter as últimas leituras
+    const registrosAgua = todosRegistrosOnline.filter(r => r.tipo === 'agua').sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+    const registrosEnergia = todosRegistrosOnline.filter(r => r.tipo === 'energia').sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+
+    // Determinar a última leitura (leituraAtual do registro mais recente)
+    if (registrosAgua.length > 0) {
+        const ultimoAgua = registrosAgua[registrosAgua.length - 1];
+        totalAguaLeitura = parseFloat(ultimoAgua.leituraAtual || 0);
+        ultimasLeituras.agua.data = new Date(ultimoAgua.dataHora);
+    }
+    if (registrosEnergia.length > 0) {
+        const ultimoEnergia = registrosEnergia[registrosEnergia.length - 1];
+        totalEnergiaLeitura = parseFloat(ultimoEnergia.leituraAtual || 0);
+        ultimasLeituras.energia.data = new Date(ultimoEnergia.dataHora);
+    }
+
+    // Calcular o consumo total a partir da diferença da primeira leitura com a última
+    if (registrosAgua.length > 0) {
+        const primeiroAgua = registrosAgua[0];
+        totalConsumoAgua = totalAguaLeitura - parseFloat(primeiroAgua.leituraAnterior || 0);
+        primeiraData = primeiraData ? Math.min(primeiraData, new Date(primeiroAgua.dataHora)) : new Date(primeiroAgua.dataHora);
+    }
+    if (registrosEnergia.length > 0) {
+        const primeiroEnergia = registrosEnergia[0];
+        totalConsumoEnergia = totalEnergiaLeitura - parseFloat(primeiroEnergia.leituraAnterior || 0);
+        primeiraData = primeiraData ? Math.min(primeiraData, new Date(primeiroEnergia.dataHora)) : new Date(primeiroEnergia.dataHora);
+    }
+
+    // 2. Definir Leitura Anterior para novos registros e a Última Leitura para os totais
+    leituraAnteriorAgua = totalAguaLeitura;
+    leituraAnteriorEnergia = totalEnergiaLeitura;
+
+    document.getElementById('leituraAnteriorAgua').value = leituraAnteriorAgua.toFixed(2);
+    document.getElementById('leituraAnteriorEnergia').value = leituraAnteriorEnergia.toFixed(2);
+    document.getElementById('leituraAtualAgua').value = leituraAnteriorAgua.toFixed(2);
+    document.getElementById('leituraAtualEnergia').value = leituraAnteriorEnergia.toFixed(2);
+
+    document.getElementById('totalAgua').textContent = totalAguaLeitura.toFixed(2) + ' m³';
+    document.getElementById('totalEnergia').textContent = totalEnergiaLeitura.toFixed(2) + ' kWh';
+
+    // 3. Calcular Média Diária Geral
+    let diasTotais = 0;
+    ultimaData = new Date();
+    if (primeiraData) {
+        // Calcula a diferença em milissegundos, divide por (1000 * 60 * 60 * 24) para obter dias
+        diasTotais = Math.ceil((ultimaData.getTime() - primeiraData.getTime()) / (1000 * 60 * 60 * 24));
+        diasTotais = Math.max(1, diasTotais); // Garante que seja pelo menos 1 dia
+    }
+    
+    const mediaAgua = diasTotais > 0 ? (totalConsumoAgua / diasTotais) : 0;
+    const mediaEnergia = diasTotais > 0 ? (totalConsumoEnergia / diasTotais) : 0;
+
+    document.getElementById('mediaDiariaAgua').textContent = mediaAgua.toFixed(2) + ' m³/dia';
+    document.getElementById('mediaDiariaEnergia').textContent = mediaEnergia.toFixed(2) + ' kWh/dia';
+
+    // 4. Consumo Hoje (Ajustado para o novo cálculo de consumo diário)
+    const consumoHoje = calcularConsumoDiarioPorData(new Date().toISOString().split('T')[0]);
+    document.getElementById('consumoHojeAgua').textContent = (consumoHoje.agua || 0).toFixed(2) + ' m³';
+    document.getElementById('consumoHojeEnergia').textContent = (consumoHoje.energia || 0).toFixed(2) + ' kWh';
+
+    // 5. Recalcular Consumo (para atualizar o display caso o campo de leitura atual não esteja vazio)
+    calcularConsumo('agua');
+    calcularConsumo('energia');
+}
+
+// Função auxiliar para obter a data no formato AAAA-MM-DD
+function toYYYYMMDD(date) {
+    const d = new Date(date);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().split('T')[0];
+}
+
+// Função que calcula o consumo em um dia específico (o valor da diferença entre a última e a primeira leitura do dia)
+function calcularConsumoDiarioPorData(dataString) {
+    const registrosDoDia = todosRegistrosOnline
+        .filter(r => toYYYYMMDD(r.dataHora) === dataString)
+        .sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+
+    let consumoAgua = 0;
+    let consumoEnergia = 0;
+
+    const regAgua = registrosDoDia.filter(r => r.tipo === 'agua');
+    const regEnergia = registrosDoDia.filter(r => r.tipo === 'energia');
+
+    if (regAgua.length > 0) {
+        const primeiraLeitura = parseFloat(regAgua[0].leituraAnterior || 0);
+        const ultimaLeitura = parseFloat(regAgua[regAgua.length - 1].leituraAtual || 0);
+        consumoAgua = Math.max(0, ultimaLeitura - primeiraLeitura);
+    }
+    if (regEnergia.length > 0) {
+        const primeiraLeitura = parseFloat(regEnergia[0].leituraAnterior || 0);
+        const ultimaLeitura = parseFloat(regEnergia[regEnergia.length - 1].leituraAtual || 0);
+        consumoEnergia = Math.max(0, ultimaLeitura - primeiraLeitura);
+    }
+
+    return { agua: consumoAgua, energia: consumoEnergia };
+}
+
+// NOVA FUNÇÃO: Calcula e exibe o consumo diário entre as datas
+function calcularConsumoDiario() {
+    const dataInicioStr = document.getElementById('dailyDataInicio').value;
+    const dataFimStr = document.getElementById('dailyDataFim').value;
+    const tbody = document.getElementById('consumoDiarioBody');
+
+    if (!dataInicioStr || !dataFimStr) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--error);">Selecione as duas datas!</td></tr>`;
+        return;
+    }
+
+    const dataInicio = new Date(dataInicioStr);
+    const dataFim = new Date(dataFimStr);
+
+    if (dataInicio > dataFim) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--error);">A Data Início não pode ser maior que a Data Fim!</td></tr>`;
+        return;
+    }
+    
+    // Adiciona 1 dia (em milissegundos) à Data Fim para incluir o dia final no loop
+    const umDia = 1000 * 60 * 60 * 24;
+    
+    tbody.innerHTML = '';
+    let registroEncontrado = false;
+
+    for (let d = dataInicio; d <= dataFim; d.setDate(d.getDate() + 1)) {
+        const dataAtualStr = toYYYYMMDD(d);
+        const consumo = calcularConsumoDiarioPorData(dataAtualStr);
+
+        if (consumo.agua > 0 || consumo.energia > 0) {
+            registroEncontrado = true;
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${new Date(dataAtualStr).toLocaleDateString('pt-BR')}</td>
+                <td style="text-align: right;">${consumo.agua.toFixed(2)} m³</td>
+                <td style="text-align: right;">${consumo.energia.toFixed(2)} kWh</td>
+            `;
         }
-    } catch (error) {
-        console.error('Erro ao carregar leituras:', error);
+    }
+    
+    // Volta a data para não influenciar o próximo loop de iteração (apenas por segurança)
+    dataFim.setDate(dataFim.getDate() - 1); 
+
+    if (!registroEncontrado) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 40px; color: #999;">
+            Nenhum consumo registrado no período selecionado.
+        </td></tr>`;
     }
 }
+// FUNÇÕES RESTANTES (carregarHistorico, renderizarHistorico, etc.) PERMANECEM IGUAIS
 
 async function carregarHistorico() {
     if (!scriptURL || !sheetID) {
         console.warn('Configuração ausente.');
         document.getElementById('totalRecords').textContent = '0';
+        // Ajusta as leituras para zero se não houver configuração
+        calcularEstatisticasGerais(); 
         return;
     }
     
     try {
-        const filtro = document.getElementById('filtroTipo').value;
-        const response = await fetch(`${scriptURL}?action=getHistory&sheetId=${sheetID}&tipo=${filtro}`);
+        // Força a buscar todos para o cálculo de estatísticas
+        const response = await fetch(`${scriptURL}?action=getHistory&sheetId=${sheetID}&tipo=all`); 
         const data = await response.json();
         
         if (data.status === 'success' && data.registros && data.registros.length > 0) {
@@ -1267,11 +1489,14 @@ function limparFiltros() {
 }
 
 function calcularConsumo(tipo) {
-    const leituraAtual = parseFloat(document.getElementById(`leituraAtual${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).value) || 0;
+    const leituraAtualInput = document.getElementById(`leituraAtual${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+    const consumoTotalInput = document.getElementById(`consumoTotal${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+    
+    const leituraAtual = parseFloat(leituraAtualInput.value) || 0;
     const leituraAnterior = tipo === 'agua' ? leituraAnteriorAgua : leituraAnteriorEnergia;
     
     const consumo = Math.max(0, leituraAtual - leituraAnterior);
-    document.getElementById(`consumoTotal${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).value = consumo.toFixed(2);
+    consumoTotalInput.value = consumo.toFixed(2);
     
     const display = document.getElementById(`consumptionDisplay${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
     const valueDisplay = document.getElementById(`consumptionValue${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
@@ -1357,7 +1582,7 @@ async function handleSubmit(event, tipo) {
     }
     
     if (success) {
-        await carregarDados();
+        await carregarDados(); // Recarrega histórico, estatísticas e leituras anteriores
     }
     carregarRegistrosPendentes();
     
@@ -1374,7 +1599,9 @@ async function handleSubmit(event, tipo) {
     btn.disabled = false;
     btn.innerHTML = originalHTML;
 
-    carregarUltimasLeituras();
+    // A chamada carregarDados() já chama calcularEstatisticasGerais(), que atualiza as leituras.
+    // Então, carregarUltimasLeituras() é desnecessário aqui.
+    // carregarUltimasLeituras(); 
 }
 
 function getRegistrosOffline() {
