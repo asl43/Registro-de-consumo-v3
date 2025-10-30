@@ -937,7 +937,6 @@
         </div>
     </div>
 
-    <!-- NOVO: Gráficos -->
     <div class="card">
         <div class="card-header">
             <div class="card-title">
@@ -962,7 +961,6 @@
         </div>
     </div>
 
-    <!-- NOVO: Relatórios -->
     <div class="card">
         <div class="card-header">
             <div class="card-title">
@@ -1368,7 +1366,6 @@
     </div>
 </div>
 
-<!-- Modal Editar Online -->
 <div id="editOnlineModal" class="modal">
     <div class="modal-content">
         <span class="close-btn" onclick="fecharModalEditOnline()">&times;</span>
@@ -1425,7 +1422,6 @@
     </div>
 </div>
 
-<!-- Modal Editar Offline -->
 <div id="editModal" class="modal">
     <div class="modal-content">
         <span class="close-btn" onclick="fecharModal()">&times;</span>
@@ -1495,14 +1491,18 @@ let currentChartType = 'line';
 let sortDirection = {};
 let nomesUnicos = new Set();
 let matriculasUnicas = new Set();
+/** NOVO: Mapa para associação Nome -> Matrícula */
+let nomeMatriculaMap = new Map(); 
 
 window.onload = function() {
     carregarConfiguracao();
     setDataHoraAtual();
     setInterval(atualizarRelogio, 1000);
     carregarTema();
-    inicializarAutocomplete();
     
+    // O inicializarAutocomplete agora é chamado no carregarDados
+    // pois depende dos dados online para a sugestão cruzada.
+
     const nomeInputs = document.querySelectorAll('input[name="nome"]');
     const matriculaInputs = document.querySelectorAll('input[name="matricula"]');
     
@@ -1607,7 +1607,8 @@ function inicializarAutocomplete() {
         if (input) {
             input.addEventListener('input', function() {
                 const tipo = id.includes('Agua') ? 'Agua' : 'Energia';
-                mostrarAutocomplete(this.value, 'nome', 'autocompleteNome' + tipo, id);
+                // O autocomplete para nomes agora chama a função com o ID do input de matrícula
+                mostrarAutocomplete(this.value, 'nome', 'autocompleteNome' + tipo, id, 'matricula' + tipo);
             });
         }
     });
@@ -1623,7 +1624,14 @@ function inicializarAutocomplete() {
     });
 }
 
-function mostrarAutocomplete(valor, tipo, autocompleteId, inputId) {
+/** * Função atualizada para incluir preenchimento cruzado (Nome -> Matrícula) 
+ * @param {string} valor - O valor atual do campo de entrada.
+ * @param {string} tipo - 'nome' ou 'matricula'.
+ * @param {string} autocompleteId - O ID do div de autocomplete.
+ * @param {string} inputId - O ID do input que disparou o evento.
+ * @param {string} [relatedInputId] - O ID do input relacionado (matrícula se o tipo for nome).
+ */
+function mostrarAutocomplete(valor, tipo, autocompleteId, inputId, relatedInputId) {
     const autocompleteDiv = document.getElementById(autocompleteId);
     if (!autocompleteDiv) return;
     
@@ -1641,20 +1649,48 @@ function mostrarAutocomplete(valor, tipo, autocompleteId, inputId) {
     filtrados.forEach(item => {
         const div = document.createElement('div');
         div.textContent = item;
+        
+        if (tipo === 'nome' && relatedInputId && nomeMatriculaMap.has(item)) {
+            // Adiciona a matrícula sugerida ao lado do nome (melhor feedback visual)
+            div.innerHTML += ` <small style="color: var(--primary); opacity: 0.7;">(${nomeMatriculaMap.get(item)})</small>`;
+        }
+        
         div.onclick = function() {
             document.getElementById(inputId).value = item;
             autocompleteDiv.innerHTML = '';
+            
+            // Lógica do preenchimento cruzado: Se um nome foi selecionado e tem matrícula associada.
+            if (tipo === 'nome' && relatedInputId && nomeMatriculaMap.has(item)) {
+                const matriculaInput = document.getElementById(relatedInputId);
+                if (matriculaInput) {
+                    matriculaInput.value = nomeMatriculaMap.get(item);
+                }
+            }
         };
         autocompleteDiv.appendChild(div);
     });
 }
 
 function atualizarAutocomplete() {
+    nomesUnicos.clear();
+    matriculasUnicas.clear();
+    nomeMatriculaMap.clear();
+
     todosRegistrosOnline.forEach(reg => {
         if (reg.nome) nomesUnicos.add(reg.nome);
         if (reg.matricula) matriculasUnicas.add(reg.matricula);
+
+        // Atualiza o mapa com a última matrícula registrada para o nome
+        if (reg.nome && reg.matricula) {
+            // Como os registros vêm ordenados por data (do mais antigo para o mais novo)
+            // o último registro sobrescreve o anterior, garantindo a matrícula mais recente.
+            nomeMatriculaMap.set(reg.nome, reg.matricula);
+        }
     });
+    
+    inicializarAutocomplete(); // Inicializa os listeners após a atualização dos dados
 }
+// FIM AUTOCOMPLETE NOVO
 
 function setDataHoraAtual() {
     const now = new Date();
@@ -1744,7 +1780,7 @@ async function testarConexao() {
 async function carregarDados() {
     await carregarHistorico();
     calcularEstatisticasGerais();
-    atualizarAutocomplete();
+    atualizarAutocomplete(); // Chamada aqui para garantir que os dados de nome/matrícula estejam prontos
     atualizarGrafico();
     atualizarRelatorio();
 }
@@ -1934,7 +1970,8 @@ async function carregarHistorico() {
         const data = await response.json();
         
         if (data.status === 'success' && data.registros && data.registros.length > 0) {
-            todosRegistrosOnline = data.registros;
+            // Garante que os registros mais antigos são os primeiros para o mapeamento Nome->Matrícula
+            todosRegistrosOnline = data.registros.sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
             aplicarFiltros();
         } else {
             todosRegistrosOnline = [];
