@@ -1889,6 +1889,10 @@ function toYYYYMMDD(date) {
     return d.toISOString().split('T')[0];
 }
 
+/**
+ * Função Reforçada: Calcula o consumo diário como a diferença entre a 
+ * última Leitura Atual do dia e a Leitura Anterior do primeiro registro do dia.
+ */
 function calcularConsumoDiarioPorData(dataString) {
     const registrosDoDia = todosRegistrosOnline
         .filter(r => toYYYYMMDD(r.dataHora) === dataString)
@@ -1900,15 +1904,26 @@ function calcularConsumoDiarioPorData(dataString) {
     const regAgua = registrosDoDia.filter(r => r.tipo === 'agua');
     const regEnergia = registrosDoDia.filter(r => r.tipo === 'energia');
 
+    // Cálculo para Água
     if (regAgua.length > 0) {
-        const primeiraLeitura = parseFloat(regAgua[0].leituraAnterior || 0);
-        const ultimaLeitura = parseFloat(regAgua[regAgua.length - 1].leituraAtual || 0);
-        consumoAgua = Math.max(0, ultimaLeitura - primeiraLeitura);
+        // A Leitura Anterior do primeiro registro do dia é o ponto de partida
+        const leituraInicioDoDia = parseFloat(regAgua[0].leituraAnterior || 0);
+        // A Leitura Atual do último registro do dia é o ponto de chegada
+        const leituraFimDoDia = parseFloat(regAgua[regAgua.length - 1].leituraAtual || 0);
+        
+        // Consumo Diário = Ponto de Chegada - Ponto de Partida
+        consumoAgua = Math.max(0, leituraFimDoDia - leituraInicioDoDia);
     }
+    
+    // Cálculo para Energia
     if (regEnergia.length > 0) {
-        const primeiraLeitura = parseFloat(regEnergia[0].leituraAnterior || 0);
-        const ultimaLeitura = parseFloat(regEnergia[regEnergia.length - 1].leituraAtual || 0);
-        consumoEnergia = Math.max(0, ultimaLeitura - primeiraLeitura);
+        // A Leitura Anterior do primeiro registro do dia é o ponto de partida
+        const leituraInicioDoDia = parseFloat(regEnergia[0].leituraAnterior || 0);
+        // A Leitura Atual do último registro do dia é o ponto de chegada
+        const leituraFimDoDia = parseFloat(regEnergia[regEnergia.length - 1].leituraAtual || 0);
+        
+        // Consumo Diário = Ponto de Chegada - Ponto de Partida
+        consumoEnergia = Math.max(0, leituraFimDoDia - leituraInicioDoDia);
     }
 
     return { agua: consumoAgua, energia: consumoEnergia };
