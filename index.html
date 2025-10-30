@@ -3,12 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Registro de Consumo</title>
+<title>Sistema de Registro de Consumo v4.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
-    /* O CSS ORIGINAL FOI MANTIDO SEM ALTERAÇÕES PARA MANTER O ESTILO */
     * {
         box-sizing: border-box;
         margin: 0;
@@ -27,14 +29,31 @@
         --border: #e0e0e0;
         --shadow: 0 2px 8px rgba(0,0,0,0.1);
         --shadow-lg: 0 4px 16px rgba(0,0,0,0.15);
+        --bg-gradient-start: #667eea;
+        --bg-gradient-end: #764ba2;
+        --card-bg: #ffffff;
+        --text-color: #212121;
+        --text-secondary: #666;
+    }
+
+    [data-theme="dark"] {
+        --dark: #f5f5f5;
+        --light: #2a2a2a;
+        --border: #444;
+        --card-bg: #1e1e1e;
+        --text-color: #e0e0e0;
+        --text-secondary: #aaa;
+        --bg-gradient-start: #2c3e50;
+        --bg-gradient-end: #1a1a2e;
     }
     
     body {
         font-family: 'Inter', sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
         min-height: 100vh;
         padding: 20px;
-        color: var(--dark);
+        color: var(--text-color);
+        transition: all 0.3s ease;
     }
     
     .container {
@@ -47,6 +66,7 @@
         color: white;
         margin-bottom: 30px;
         animation: fadeInDown 0.6s ease;
+        position: relative;
     }
     
     .header h1 {
@@ -60,9 +80,35 @@
         font-size: 16px;
         opacity: 0.95;
     }
+
+    .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: var(--card-bg);
+        border: 2px solid var(--border);
+        border-radius: 50px;
+        padding: 10px 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s;
+    }
+
+    .theme-toggle:hover {
+        transform: scale(1.05);
+    }
+
+    .theme-toggle .material-icons {
+        font-size: 24px;
+        color: var(--primary);
+    }
     
     .status-bar {
-        background: white;
+        background: var(--card-bg);
         padding: 15px 25px;
         border-radius: 12px;
         box-shadow: var(--shadow-lg);
@@ -88,17 +134,17 @@
     
     .status-text {
         font-size: 14px;
-        color: #666;
+        color: var(--text-secondary);
     }
     
     .status-value {
         font-size: 16px;
         font-weight: 600;
-        color: var(--dark);
+        color: var(--text-color);
     }
     
     .card {
-        background: white;
+        background: var(--card-bg);
         border-radius: 12px;
         padding: 25px;
         box-shadow: var(--shadow);
@@ -109,10 +155,17 @@
     .card-header {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 12px;
         margin-bottom: 20px;
         padding-bottom: 15px;
         border-bottom: 2px solid var(--light);
+    }
+
+    .card-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
     
     .card-header .material-icons {
@@ -123,7 +176,12 @@
     .card-header h2 {
         font-size: 20px;
         font-weight: 600;
-        color: var(--dark);
+        color: var(--text-color);
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 10px;
     }
     
     .form-grid {
@@ -140,7 +198,7 @@
         display: block;
         font-size: 14px;
         font-weight: 500;
-        color: var(--dark);
+        color: var(--text-color);
         margin-bottom: 8px;
     }
     
@@ -153,7 +211,8 @@
         font-size: 15px;
         font-family: inherit;
         transition: all 0.3s;
-        background: white;
+        background: var(--card-bg);
+        color: var(--text-color);
     }
     
     .form-group input:focus,
@@ -164,8 +223,8 @@
     }
     
     .form-group input:read-only {
-        background: #f8f9fa;
-        color: #495057;
+        background: var(--light);
+        color: var(--text-secondary);
         font-weight: 600;
         cursor: not-allowed;
     }
@@ -249,11 +308,11 @@
         transform: translateY(-1px);
     }
 
-    .btn-icon-only {
+    .btn-icon {
         padding: 8px;
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
     }
     
     .btn-full {
@@ -268,13 +327,19 @@
     }
     
     .stat-card {
-        background: white;
+        background: var(--card-bg);
         padding: 25px;
         border-radius: 12px;
         box-shadow: var(--shadow);
         text-align: center;
         position: relative;
         overflow: hidden;
+        transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
     }
     
     .stat-card::before {
@@ -294,7 +359,7 @@
     
     .stat-label {
         font-size: 13px;
-        color: #757575;
+        color: var(--text-secondary);
         margin-bottom: 8px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -303,11 +368,69 @@
     .stat-value {
         font-size: 32px;
         font-weight: 700;
-        color: var(--dark);
+        color: var(--text-color);
+    }
+
+    .trend-indicator {
+        display: inline-flex;
+        align-items: center;
+        font-size: 14px;
+        margin-top: 8px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+
+    .trend-up {
+        background: #ffebee;
+        color: var(--error);
+    }
+
+    .trend-down {
+        background: #e8f5e9;
+        color: var(--success);
+    }
+
+    .trend-neutral {
+        background: var(--light);
+        color: var(--text-secondary);
+    }
+
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-top: 20px;
+    }
+
+    .chart-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--border);
+    }
+
+    .chart-tab {
+        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--text-secondary);
+        transition: all 0.3s;
+    }
+
+    .chart-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+
+    .chart-tab:hover {
+        color: var(--primary);
     }
     
     .filter-container {
-        background: #f8f9fa;
+        background: var(--light);
         padding: 20px;
         border-radius: 8px;
         margin-bottom: 20px;
@@ -326,6 +449,29 @@
         gap: 10px;
         flex-wrap: wrap;
         margin-top: 15px;
+    }
+
+    .search-box {
+        position: relative;
+        margin-bottom: 15px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 12px 15px 12px 45px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        font-size: 15px;
+        background: var(--card-bg);
+        color: var(--text-color);
+    }
+
+    .search-box .material-icons {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
     }
     
     .table-container {
@@ -352,6 +498,23 @@
         text-align: left;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    table thead th:hover {
+        background: rgba(255,255,255,0.1);
+    }
+
+    table thead th .sort-icon {
+        font-size: 16px;
+        vertical-align: middle;
+        margin-left: 5px;
+        opacity: 0.5;
+    }
+
+    table thead th.sorted .sort-icon {
+        opacity: 1;
     }
     
     table tbody tr {
@@ -360,17 +523,22 @@
     }
     
     table tbody tr:hover {
-        background: #f5f5f5;
+        background: var(--light);
     }
     
     table tbody td {
         padding: 14px 16px;
         font-size: 14px;
+        color: var(--text-color);
     }
 
     table tbody tr.offline-row {
         background: #fff8e1;
         font-weight: 500;
+    }
+
+    [data-theme="dark"] table tbody tr.offline-row {
+        background: #3e2723;
     }
     
     .badge {
@@ -448,12 +616,12 @@
         width: 100%;
         height: 100%;
         overflow: auto;
-        background-color: rgba(0,0,0,0.4);
+        background-color: rgba(0,0,0,0.5);
         padding-top: 60px;
     }
 
     .modal-content {
-        background-color: #fefefe;
+        background-color: var(--card-bg);
         margin: 5% auto;
         padding: 30px;
         border-radius: 12px;
@@ -465,17 +633,17 @@
     }
 
     .close-btn {
-        color: #aaa;
+        color: var(--text-secondary);
         float: right;
         font-size: 28px;
         font-weight: bold;
+        cursor: pointer;
     }
 
     .close-btn:hover,
     .close-btn:focus {
-        color: #000;
+        color: var(--text-color);
         text-decoration: none;
-        cursor: pointer;
     }
     
     .consumption-display {
@@ -506,6 +674,63 @@
 
     .daily-consumption-table table {
         min-width: 400px;
+    }
+
+    .autocomplete-items {
+        position: absolute;
+        border: 1px solid var(--border);
+        border-top: none;
+        z-index: 99;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 200px;
+        overflow-y: auto;
+        background: var(--card-bg);
+        border-radius: 0 0 8px 8px;
+        box-shadow: var(--shadow);
+    }
+
+    .autocomplete-items div {
+        padding: 10px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-color);
+    }
+
+    .autocomplete-items div:hover {
+        background: var(--light);
+    }
+
+    .keyboard-shortcuts {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--card-bg);
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: var(--shadow-lg);
+        font-size: 12px;
+        display: none;
+        z-index: 999;
+    }
+
+    .keyboard-shortcuts.show {
+        display: block;
+    }
+
+    .keyboard-shortcuts h4 {
+        margin-bottom: 10px;
+        color: var(--text-color);
+    }
+
+    .keyboard-shortcuts kbd {
+        background: var(--light);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-family: monospace;
+        color: var(--text-color);
     }
     
     @keyframes spin {
@@ -539,6 +764,21 @@
         }
     }
     
+    @media print {
+        .btn, .filter-container, .card-header, .theme-toggle {
+            display: none !important;
+        }
+        
+        body {
+            background: white;
+        }
+        
+        .card {
+            box-shadow: none;
+            border: 1px solid #000;
+        }
+    }
+
     @media (max-width: 768px) {
         body {
             padding: 15px;
@@ -568,16 +808,38 @@
         table {
              min-width: 600px;
         }
+
+        .theme-toggle {
+            top: 10px;
+            right: 10px;
+            padding: 8px 12px;
+        }
+
+        .chart-container {
+            height: 300px;
+        }
     }
 </style>
 </head>
 
 <body>
 
+<div class="theme-toggle" onclick="toggleTheme()">
+    <span class="material-icons" id="themeIcon">dark_mode</span>
+    <span id="themeText">Escuro</span>
+</div>
+
+<div class="keyboard-shortcuts" id="keyboardShortcuts">
+    <h4>⌨️ Atalhos de Teclado</h4>
+    <p><kbd>Ctrl</kbd> + <kbd>S</kbd> - Salvar configuração</p>
+    <p><kbd>Esc</kbd> - Fechar modal</p>
+    <p><kbd>?</kbd> - Mostrar/ocultar atalhos</p>
+</div>
+
 <div class="container">
     <div class="header">
-        <h1>💧⚡ Sistema de Registro de Consumo</h1>
-        <p>Controle inteligente de água e energia com sincronização em tempo real e modo offline</p>
+        <h1>💧⚡ Sistema de Registro de Consumo v4.0</h1>
+        <p>Controle inteligente com gráficos, modo escuro e edição online</p>
     </div>
     
     <div class="status-bar">
@@ -598,14 +860,14 @@
         <div class="status-item">
             <span class="material-icons">storage</span>
             <div>
-                <div class="status-text">Total de Registros (Online)</div>
+                <div class="status-text">Total de Registros</div>
                 <div class="status-value" id="totalRecords">0</div>
             </div>
         </div>
         <div class="status-item">
             <span class="material-icons" style="color: var(--warning);">save</span>
             <div>
-                <div class="status-text">Registros Pendentes (Offline)</div>
+                <div class="status-text">Pendentes (Offline)</div>
                 <div class="status-value" id="pendingRecordsCount">0</div>
             </div>
         </div>
@@ -613,8 +875,10 @@
     
     <div class="card">
         <div class="card-header">
-            <span class="material-icons">settings</span>
-            <h2>Configuração do Sistema</h2>
+            <div class="card-title">
+                <span class="material-icons">settings</span>
+                <h2>Configuração do Sistema</h2>
+            </div>
         </div>
         
         <div class="form-grid">
@@ -647,39 +911,129 @@
             <div class="stat-icon">💧</div>
             <div class="stat-label">Leitura Atual Água</div>
             <div class="stat-value" id="totalAgua">0.00 m³</div>
+            <div class="trend-indicator trend-neutral" id="trendAgua">
+                <span class="material-icons" style="font-size: 16px;">remove</span>
+                Estável
+            </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon">⚡</div>
             <div class="stat-label">Leitura Atual Energia</div>
             <div class="stat-value" id="totalEnergia">0.00 kWh</div>
+            <div class="trend-indicator trend-neutral" id="trendEnergia">
+                <span class="material-icons" style="font-size: 16px;">remove</span>
+                Estável
+            </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon" style="color: var(--secondary);">💧</div>
-            <div class="stat-label">Média Diária Água</div>
-            <div class="stat-value" id="mediaDiariaAgua">0.00 m³/dia</div>
+            <div class="stat-label">Consumo Hoje - Água</div>
+            <div class="stat-value" id="consumoHojeAgua">0.00 m³</div>
         </div>
         <div class="stat-card">
             <div class="stat-icon" style="color: var(--accent);">⚡</div>
-            <div class="stat-label">Média Diária Energia</div>
-            <div class="stat-value" id="mediaDiariaEnergia">0.00 kWh/dia</div>
+            <div class="stat-label">Consumo Hoje - Energia</div>
+            <div class="stat-value" id="consumoHojeEnergia">0.00 kWh</div>
+        </div>
+    </div>
+
+    <!-- NOVO: Gráficos -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <span class="material-icons">bar_chart</span>
+                <h2>Gráficos de Consumo</h2>
+            </div>
+            <div class="card-actions">
+                <button class="btn btn-icon btn-secondary" onclick="exportarGrafico()" title="Exportar Gráfico">
+                    <span class="material-icons">download</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="chart-tabs">
+            <button class="chart-tab active" onclick="trocarGrafico('line')">Evolução</button>
+            <button class="chart-tab" onclick="trocarGrafico('bar')">Comparativo</button>
+            <button class="chart-tab" onclick="trocarGrafico('pie')">Distribuição</button>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="consumptionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- NOVO: Relatórios -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <span class="material-icons">summarize</span>
+                <h2>Relatórios Personalizados</h2>
+            </div>
+            <div class="card-actions">
+                <button class="btn btn-primary" onclick="gerarRelatorioPDF()">
+                    <span class="material-icons">picture_as_pdf</span>
+                    Exportar PDF
+                </button>
+                <button class="btn btn-secondary" onclick="exportarCSV()">
+                    <span class="material-icons">table_chart</span>
+                    Exportar CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Período do Relatório</label>
+                <select id="relatorioPeriodo" onchange="atualizarRelatorio()">
+                    <option value="7">Últimos 7 dias</option>
+                    <option value="30" selected>Últimos 30 dias</option>
+                    <option value="90">Últimos 90 dias</option>
+                    <option value="all">Todos os registros</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="relatorioResumo" style="margin-top: 20px;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Água no Período</div>
+                    <div class="stat-value" id="relatorioTotalAgua">0.00 m³</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Energia no Período</div>
+                    <div class="stat-value" id="relatorioTotalEnergia">0.00 kWh</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Média Diária Água</div>
+                    <div class="stat-value" id="relatorioMediaAgua">0.00 m³/dia</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Média Diária Energia</div>
+                    <div class="stat-value" id="relatorioMediaEnergia">0.00 kWh/dia</div>
+                </div>
+            </div>
         </div>
     </div>
     
     <div class="card">
         <div class="card-header">
-            <span class="material-icons">water_drop</span>
-            <h2>Registro de Consumo de Água</h2>
+            <div class="card-title">
+                <span class="material-icons">water_drop</span>
+                <h2>Registro de Consumo de Água</h2>
+            </div>
         </div>
         
         <form id="aguaForm" onsubmit="handleSubmit(event, 'agua')">
             <div class="form-grid">
                 <div class="form-group">
                     <label>Nome Completo *</label>
-                    <input type="text" name="nome" required placeholder="Digite o nome completo">
+                    <input type="text" name="nome" id="nomeAgua" required placeholder="Digite o nome completo" autocomplete="off">
+                    <div class="autocomplete-items" id="autocompleteNomeAgua"></div>
                 </div>
                 <div class="form-group">
                     <label>Matrícula Residencial *</label>
-                    <input type="text" name="matricula" required placeholder="Digite a matrícula">
+                    <input type="text" name="matricula" id="matriculaAgua" required placeholder="Digite a matrícula" autocomplete="off">
+                    <div class="autocomplete-items" id="autocompleteMatriculaAgua"></div>
                 </div>
                 <div class="form-group">
                     <label>Data e Hora *</label>
@@ -727,19 +1081,23 @@
     
     <div class="card">
         <div class="card-header">
-            <span class="material-icons">bolt</span>
-            <h2>Registro de Consumo de Energia</h2>
+            <div class="card-title">
+                <span class="material-icons">bolt</span>
+                <h2>Registro de Consumo de Energia</h2>
+            </div>
         </div>
         
         <form id="energiaForm" onsubmit="handleSubmit(event, 'energia')">
             <div class="form-grid">
                 <div class="form-group">
                     <label>Nome Completo *</label>
-                    <input type="text" name="nome" required placeholder="Digite o nome completo">
+                    <input type="text" name="nome" id="nomeEnergia" required placeholder="Digite o nome completo" autocomplete="off">
+                    <div class="autocomplete-items" id="autocompleteNomeEnergia"></div>
                 </div>
                 <div class="form-group">
                     <label>Matrícula Residencial *</label>
-                    <input type="text" name="matricula" required placeholder="Digite a matrícula">
+                    <input type="text" name="matricula" id="matriculaEnergia" required placeholder="Digite a matrícula" autocomplete="off">
+                    <div class="autocomplete-items" id="autocompleteMatriculaEnergia"></div>
                 </div>
                 <div class="form-group">
                     <label>Data e Hora *</label>
@@ -787,12 +1145,14 @@
 
     <div class="card">
         <div class="card-header">
-            <span class="material-icons">calendar_today</span>
-            <h2>Visualização do Consumo Diário</h2>
+            <div class="card-title">
+                <span class="material-icons">calendar_today</span>
+                <h2>Visualização do Consumo Diário</h2>
+            </div>
         </div>
 
         <div class="filter-container">
-            <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--dark);">
+            <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--text-color);">
                 <span class="material-icons" style="vertical-align: middle; font-size: 20px;">date_range</span>
                 Selecione o Período
             </h3>
@@ -833,14 +1193,17 @@
             </table>
         </div>
     </div>
+
     <div class="card" id="pendingRecordsCard" style="display: none;">
         <div class="card-header" style="border-bottom-color: var(--warning);">
-            <span class="material-icons" style="color: var(--warning);">warning</span>
-            <h2>Registros Pendentes (Offline) <span id="pendingCountBadge" class="badge badge-offline">0</span></h2>
+            <div class="card-title">
+                <span class="material-icons" style="color: var(--warning);">warning</span>
+                <h2>Registros Pendentes (Offline) <span id="pendingCountBadge" class="badge badge-offline">0</span></h2>
+            </div>
         </div>
 
         <div class="filter-container">
-            <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--dark);">
+            <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--text-color);">
                 <span class="material-icons" style="vertical-align: middle; font-size: 20px;">filter_list</span>
                 Filtros de Pesquisa
             </h3>
@@ -920,12 +1283,24 @@
     
     <div class="card">
         <div class="card-header">
-            <span class="material-icons">history</span>
-            <h2>Histórico de Registros (Online)</h2>
+            <div class="card-title">
+                <span class="material-icons">history</span>
+                <h2>Histórico de Registros (Online)</h2>
+            </div>
+            <div class="card-actions">
+                <button class="btn btn-icon btn-secondary" onclick="window.print()" title="Imprimir">
+                    <span class="material-icons">print</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <span class="material-icons">search</span>
+            <input type="text" id="searchInput" placeholder="Buscar por nome ou matrícula..." oninput="buscarRegistros()">
         </div>
         
         <div class="filter-container">
-            <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--dark);">
+            <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--text-color);">
                 <span class="material-icons" style="vertical-align: middle; font-size: 20px;">filter_list</span>
                 Filtros de Pesquisa
             </h3>
@@ -968,21 +1343,22 @@
         </div>
         
         <div class="table-container">
-            <table>
+            <table id="historicoTable">
                 <thead>
                     <tr>
-                        <th>Tipo</th>
-                        <th>Data/Hora</th>
-                        <th>Nome</th>
-                        <th>Matrícula</th>
-                        <th style="text-align: right;">Leitura Anterior</th>
-                        <th style="text-align: right;">Leitura Atual</th>
-                        <th style="text-align: right;">Consumo</th>
+                        <th onclick="ordenarTabela(0)">Tipo <span class="sort-icon material-icons">unfold_more</span></th>
+                        <th onclick="ordenarTabela(1)">Data/Hora <span class="sort-icon material-icons">unfold_more</span></th>
+                        <th onclick="ordenarTabela(2)">Nome <span class="sort-icon material-icons">unfold_more</span></th>
+                        <th onclick="ordenarTabela(3)">Matrícula <span class="sort-icon material-icons">unfold_more</span></th>
+                        <th onclick="ordenarTabela(4)" style="text-align: right;">Leitura Anterior <span class="sort-icon material-icons">unfold_more</span></th>
+                        <th onclick="ordenarTabela(5)" style="text-align: right;">Leitura Atual <span class="sort-icon material-icons">unfold_more</span></th>
+                        <th onclick="ordenarTabela(6)" style="text-align: right;">Consumo <span class="sort-icon material-icons">unfold_more</span></th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="historicoBody">
                     <tr>
-                        <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                        <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
                             Nenhum registro encontrado. Faça o primeiro registro!
                         </td>
                     </tr>
@@ -992,6 +1368,64 @@
     </div>
 </div>
 
+<!-- Modal Editar Online -->
+<div id="editOnlineModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="fecharModalEditOnline()">&times;</span>
+        <h2>Editar Registro Online</h2>
+        <form id="editOnlineForm" onsubmit="salvarEdicaoOnline(event)">
+            <input type="hidden" id="editOnlineRowId">
+            <input type="hidden" id="editOnlineTipo">
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nome Completo *</label>
+                    <input type="text" id="editOnlineNome" required>
+                </div>
+                <div class="form-group">
+                    <label>Matrícula Residencial *</label>
+                    <input type="text" id="editOnlineMatricula" required>
+                </div>
+                <div class="form-group">
+                    <label>Data e Hora *</label>
+                    <input type="datetime-local" id="editOnlineDataHora" required>
+                </div>
+                <div class="form-group">
+                    <label id="labelEditOnlineLeituraAnterior">Leitura Anterior (m³)</label>
+                    <input type="number" id="editOnlineLeituraAnterior" step="0.01" readonly>
+                </div>
+                <div class="form-group">
+                    <label id="labelEditOnlineLeituraAtual">Leitura Atual do Medidor (m³) *</label>
+                    <input type="number" id="editOnlineLeituraAtual" step="0.01" required oninput="calcularConsumoModalOnline()">
+                </div>
+                <div class="form-group">
+                    <label id="labelEditOnlineConsumoTotal">Consumo Total Calculado (m³)</label>
+                    <input type="number" id="editOnlineConsumoTotal" step="0.01" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Extra 1 (Opcional)</label>
+                    <input type="text" id="editOnlineExtra1">
+                </div>
+                <div class="form-group">
+                    <label>Extra 2 (Opcional)</label>
+                    <input type="text" id="editOnlineExtra2">
+                </div>
+                <div class="form-group">
+                    <label>Extra 3 (Opcional)</label>
+                    <input type="text" id="editOnlineExtra3">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top: 20px;">
+                <span class="material-icons">save</span>
+                Salvar Alterações
+            </button>
+            <div class="alert" id="alertEditOnlineModal"></div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Editar Offline -->
 <div id="editModal" class="modal">
     <div class="modal-content">
         <span class="close-btn" onclick="fecharModal()">&times;</span>
@@ -1056,22 +1490,36 @@ let leituraAnteriorEnergia = 0;
 let isProcessing = false;
 let todosRegistrosOnline = [];
 let todosRegistrosOffline = [];
+let currentChart = null;
+let currentChartType = 'line';
+let sortDirection = {};
+let nomesUnicos = new Set();
+let matriculasUnicas = new Set();
 
 window.onload = function() {
     carregarConfiguracao();
     setDataHoraAtual();
     setInterval(atualizarRelogio, 1000);
+    carregarTema();
+    inicializarAutocomplete();
     
-    const nomeInput = document.querySelectorAll('input[name="nome"]');
-    const matriculaInput = document.querySelectorAll('input[name="matricula"]');
+    const nomeInputs = document.querySelectorAll('input[name="nome"]');
+    const matriculaInputs = document.querySelectorAll('input[name="matricula"]');
     
     const ultimoNome = localStorage.getItem('ultimoNome') || '';
     const ultimaMatricula = localStorage.getItem('ultimaMatricula') || '';
     
-    nomeInput.forEach(input => input.value = ultimoNome);
-    matriculaInput.forEach(input => input.value = ultimaMatricula);
+    nomeInputs.forEach(input => {
+        if (!input.id.includes('Online') && !input.id.includes('edit')) {
+            input.value = ultimoNome;
+        }
+    });
+    matriculaInputs.forEach(input => {
+        if (!input.id.includes('Online') && !input.id.includes('edit')) {
+            input.value = ultimaMatricula;
+        }
+    });
     
-    // Define as datas do filtro de consumo diário para o mês atual
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const today = now.toISOString().split('T')[0];
@@ -1083,7 +1531,130 @@ window.onload = function() {
     }
 
     carregarRegistrosPendentes();
+    setupKeyboardShortcuts();
 };
+
+// TEMA ESCURO/CLARO
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    const icon = document.getElementById('themeIcon');
+    const text = document.getElementById('themeText');
+    
+    if (newTheme === 'dark') {
+        icon.textContent = 'light_mode';
+        text.textContent = 'Claro';
+    } else {
+        icon.textContent = 'dark_mode';
+        text.textContent = 'Escuro';
+    }
+    
+    if (currentChart) {
+        atualizarGrafico();
+    }
+}
+
+function carregarTema() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    const icon = document.getElementById('themeIcon');
+    const text = document.getElementById('themeText');
+    
+    if (savedTheme === 'dark') {
+        icon.textContent = 'light_mode';
+        text.textContent = 'Claro';
+    } else {
+        icon.textContent = 'dark_mode';
+        text.textContent = 'Escuro';
+    }
+}
+
+// ATALHOS DE TECLADO
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+S: Salvar configuração
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            salvarConfiguracao();
+        }
+        
+        // Esc: Fechar modals
+        if (e.key === 'Escape') {
+            fecharModal();
+            fecharModalEditOnline();
+        }
+        
+        // ?: Mostrar atalhos
+        if (e.key === '?') {
+            const shortcuts = document.getElementById('keyboardShortcuts');
+            shortcuts.classList.toggle('show');
+        }
+    });
+}
+
+// AUTOCOMPLETE
+function inicializarAutocomplete() {
+    const inputsNome = ['nomeAgua', 'nomeEnergia'];
+    const inputsMatricula = ['matriculaAgua', 'matriculaEnergia'];
+    
+    inputsNome.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('input', function() {
+                const tipo = id.includes('Agua') ? 'Agua' : 'Energia';
+                mostrarAutocomplete(this.value, 'nome', 'autocompleteNome' + tipo, id);
+            });
+        }
+    });
+    
+    inputsMatricula.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('input', function() {
+                const tipo = id.includes('Agua') ? 'Agua' : 'Energia';
+                mostrarAutocomplete(this.value, 'matricula', 'autocompleteMatricula' + tipo, id);
+            });
+        }
+    });
+}
+
+function mostrarAutocomplete(valor, tipo, autocompleteId, inputId) {
+    const autocompleteDiv = document.getElementById(autocompleteId);
+    if (!autocompleteDiv) return;
+    
+    autocompleteDiv.innerHTML = '';
+    
+    if (!valor) {
+        return;
+    }
+    
+    const dados = tipo === 'nome' ? Array.from(nomesUnicos) : Array.from(matriculasUnicas);
+    const filtrados = dados.filter(item => 
+        item.toLowerCase().includes(valor.toLowerCase())
+    ).slice(0, 5);
+    
+    filtrados.forEach(item => {
+        const div = document.createElement('div');
+        div.textContent = item;
+        div.onclick = function() {
+            document.getElementById(inputId).value = item;
+            autocompleteDiv.innerHTML = '';
+        };
+        autocompleteDiv.appendChild(div);
+    });
+}
+
+function atualizarAutocomplete() {
+    todosRegistrosOnline.forEach(reg => {
+        if (reg.nome) nomesUnicos.add(reg.nome);
+        if (reg.matricula) matriculasUnicas.add(reg.matricula);
+    });
+}
 
 function setDataHoraAtual() {
     const now = new Date();
@@ -1172,11 +1743,11 @@ async function testarConexao() {
 
 async function carregarDados() {
     await carregarHistorico();
-    // Após carregar o histórico, os totais e médias serão calculados
-    calcularEstatisticasGerais(); 
+    calcularEstatisticasGerais();
+    atualizarAutocomplete();
+    atualizarGrafico();
+    atualizarRelatorio();
 }
-
-// REMOVIDA A FUNÇÃO carregarUltimasLeituras() - Os dados serão obtidos e calculados a partir do histórico completo
 
 function calcularEstatisticasGerais() {
     let totalAguaLeitura = 0;
@@ -1184,10 +1755,8 @@ function calcularEstatisticasGerais() {
     let totalConsumoAgua = 0;
     let totalConsumoEnergia = 0;
     let primeiraData = null;
-    let ultimaData = null;
 
     if (todosRegistrosOnline.length === 0) {
-        // Se não houver registros, reseta os valores
         leituraAnteriorAgua = 0;
         leituraAnteriorEnergia = 0;
         document.getElementById('leituraAnteriorAgua').value = '0.00';
@@ -1196,48 +1765,30 @@ function calcularEstatisticasGerais() {
         document.getElementById('leituraAtualEnergia').value = '0.00';
         document.getElementById('totalAgua').textContent = '0.00 m³';
         document.getElementById('totalEnergia').textContent = '0.00 kWh';
-        document.getElementById('mediaDiariaAgua').textContent = '0.00 m³/dia';
-        document.getElementById('mediaDiariaEnergia').textContent = '0.00 kWh/dia';
-        document.getElementById('consumoHojeAgua').textContent = '0.00 m³'; // Resetar Consumo Hoje
-        document.getElementById('consumoHojeEnergia').textContent = '0.00 kWh'; // Resetar Consumo Hoje
+        document.getElementById('consumoHojeAgua').textContent = '0.00 m³';
+        document.getElementById('consumoHojeEnergia').textContent = '0.00 kWh';
         return;
     }
 
-    // 1. Encontrar a última leitura e o total de consumo
-    const ultimasLeituras = {
-        agua: { leitura: 0, consumo: 0, data: null },
-        energia: { leitura: 0, consumo: 0, data: null }
-    };
-    
-    // Agrupar por tipo e ordenar por data para obter as últimas leituras
     const registrosAgua = todosRegistrosOnline.filter(r => r.tipo === 'agua').sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
     const registrosEnergia = todosRegistrosOnline.filter(r => r.tipo === 'energia').sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
 
-    // Determinar a última leitura (leituraAtual do registro mais recente)
     if (registrosAgua.length > 0) {
         const ultimoAgua = registrosAgua[registrosAgua.length - 1];
         totalAguaLeitura = parseFloat(ultimoAgua.leituraAtual || 0);
-        ultimasLeituras.agua.data = new Date(ultimoAgua.dataHora);
+        const primeiroAgua = registrosAgua[0];
+        totalConsumoAgua = totalAguaLeitura - parseFloat(primeiroAgua.leituraAnterior || 0);
+        primeiraData = new Date(primeiroAgua.dataHora);
     }
+    
     if (registrosEnergia.length > 0) {
         const ultimoEnergia = registrosEnergia[registrosEnergia.length - 1];
         totalEnergiaLeitura = parseFloat(ultimoEnergia.leituraAtual || 0);
-        ultimasLeituras.energia.data = new Date(ultimoEnergia.dataHora);
-    }
-
-    // Calcular o consumo total a partir da diferença da primeira leitura com a última
-    if (registrosAgua.length > 0) {
-        const primeiroAgua = registrosAgua[0];
-        totalConsumoAgua = totalAguaLeitura - parseFloat(primeiroAgua.leituraAnterior || 0);
-        primeiraData = primeiraData ? Math.min(primeiraData, new Date(primeiroAgua.dataHora)) : new Date(primeiroAgua.dataHora);
-    }
-    if (registrosEnergia.length > 0) {
         const primeiroEnergia = registrosEnergia[0];
         totalConsumoEnergia = totalEnergiaLeitura - parseFloat(primeiroEnergia.leituraAnterior || 0);
-        primeiraData = primeiraData ? Math.min(primeiraData, new Date(primeiroEnergia.dataHora)) : new Date(primeiroEnergia.dataHora);
+        if (!primeiraData) primeiraData = new Date(primeiroEnergia.dataHora);
     }
 
-    // 2. Definir Leitura Anterior para novos registros e a Última Leitura para os totais
     leituraAnteriorAgua = totalAguaLeitura;
     leituraAnteriorEnergia = totalEnergiaLeitura;
 
@@ -1249,39 +1800,59 @@ function calcularEstatisticasGerais() {
     document.getElementById('totalAgua').textContent = totalAguaLeitura.toFixed(2) + ' m³';
     document.getElementById('totalEnergia').textContent = totalEnergiaLeitura.toFixed(2) + ' kWh';
 
-    // 3. Calcular Média Diária Geral
-    let diasTotais = 0;
-    ultimaData = new Date();
-    if (primeiraData) {
-        // Calcula a diferença em milissegundos, divide por (1000 * 60 * 60 * 24) para obter dias
-        diasTotais = Math.ceil((ultimaData.getTime() - primeiraData.getTime()) / (1000 * 60 * 60 * 24));
-        diasTotais = Math.max(1, diasTotais); // Garante que seja pelo menos 1 dia
-    }
-    
-    const mediaAgua = diasTotais > 0 ? (totalConsumoAgua / diasTotais) : 0;
-    const mediaEnergia = diasTotais > 0 ? (totalConsumoEnergia / diasTotais) : 0;
-
-    document.getElementById('mediaDiariaAgua').textContent = mediaAgua.toFixed(2) + ' m³/dia';
-    document.getElementById('mediaDiariaEnergia').textContent = mediaEnergia.toFixed(2) + ' kWh/dia';
-
-    // 4. Consumo Hoje (Ajustado para o novo cálculo de consumo diário)
     const consumoHoje = calcularConsumoDiarioPorData(new Date().toISOString().split('T')[0]);
     document.getElementById('consumoHojeAgua').textContent = (consumoHoje.agua || 0).toFixed(2) + ' m³';
     document.getElementById('consumoHojeEnergia').textContent = (consumoHoje.energia || 0).toFixed(2) + ' kWh';
 
-    // 5. Recalcular Consumo (para atualizar o display caso o campo de leitura atual não esteja vazio)
+    // Calcular tendência
+    calcularTendencia();
+    
     calcularConsumo('agua');
     calcularConsumo('energia');
 }
 
-// Função auxiliar para obter a data no formato AAAA-MM-DD
+function calcularTendencia() {
+    const hoje = new Date().toISOString().split('T')[0];
+    const ontem = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    
+    const consumoHoje = calcularConsumoDiarioPorData(hoje);
+    const consumoOntem = calcularConsumoDiarioPorData(ontem);
+    
+    atualizarTrendIndicator('trendAgua', consumoHoje.agua, consumoOntem.agua, 'm³');
+    atualizarTrendIndicator('trendEnergia', consumoHoje.energia, consumoOntem.energia, 'kWh');
+}
+
+function atualizarTrendIndicator(elementId, hoje, ontem, unidade) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    if (ontem === 0 || !ontem) {
+        element.className = 'trend-indicator trend-neutral';
+        element.innerHTML = '<span class="material-icons" style="font-size: 16px;">remove</span> Sem dados';
+        return;
+    }
+    
+    const diferenca = hoje - ontem;
+    const percentual = ((diferenca / ontem) * 100).toFixed(1);
+    
+    if (diferenca > 0) {
+        element.className = 'trend-indicator trend-up';
+        element.innerHTML = `<span class="material-icons" style="font-size: 16px;">trending_up</span> +${percentual}%`;
+    } else if (diferenca < 0) {
+        element.className = 'trend-indicator trend-down';
+        element.innerHTML = `<span class="material-icons" style="font-size: 16px;">trending_down</span> ${percentual}%`;
+    } else {
+        element.className = 'trend-indicator trend-neutral';
+        element.innerHTML = '<span class="material-icons" style="font-size: 16px;">remove</span> Estável';
+    }
+}
+
 function toYYYYMMDD(date) {
     const d = new Date(date);
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0];
 }
 
-// Função que calcula o consumo em um dia específico (o valor da diferença entre a última e a primeira leitura do dia)
 function calcularConsumoDiarioPorData(dataString) {
     const registrosDoDia = todosRegistrosOnline
         .filter(r => toYYYYMMDD(r.dataHora) === dataString)
@@ -1307,7 +1878,6 @@ function calcularConsumoDiarioPorData(dataString) {
     return { agua: consumoAgua, energia: consumoEnergia };
 }
 
-// NOVA FUNÇÃO: Calcula e exibe o consumo diário entre as datas
 function calcularConsumoDiario() {
     const dataInicioStr = document.getElementById('dailyDataInicio').value;
     const dataFimStr = document.getElementById('dailyDataFim').value;
@@ -1326,13 +1896,10 @@ function calcularConsumoDiario() {
         return;
     }
     
-    // Adiciona 1 dia (em milissegundos) à Data Fim para incluir o dia final no loop
-    const umDia = 1000 * 60 * 60 * 24;
-    
     tbody.innerHTML = '';
     let registroEncontrado = false;
 
-    for (let d = dataInicio; d <= dataFim; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(dataInicio); d <= dataFim; d.setDate(d.getDate() + 1)) {
         const dataAtualStr = toYYYYMMDD(d);
         const consumo = calcularConsumoDiarioPorData(dataAtualStr);
 
@@ -1346,9 +1913,6 @@ function calcularConsumoDiario() {
             `;
         }
     }
-    
-    // Volta a data para não influenciar o próximo loop de iteração (apenas por segurança)
-    dataFim.setDate(dataFim.getDate() - 1); 
 
     if (!registroEncontrado) {
         tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 40px; color: #999;">
@@ -1356,20 +1920,17 @@ function calcularConsumoDiario() {
         </td></tr>`;
     }
 }
-// FUNÇÕES RESTANTES (carregarHistorico, renderizarHistorico, etc.) PERMANECEM IGUAIS
 
 async function carregarHistorico() {
     if (!scriptURL || !sheetID) {
         console.warn('Configuração ausente.');
         document.getElementById('totalRecords').textContent = '0';
-        // Ajusta as leituras para zero se não houver configuração
-        calcularEstatisticasGerais(); 
+        calcularEstatisticasGerais();
         return;
     }
     
     try {
-        // Força a buscar todos para o cálculo de estatísticas
-        const response = await fetch(`${scriptURL}?action=getHistory&sheetId=${sheetID}&tipo=all`); 
+        const response = await fetch(`${scriptURL}?action=getHistory&sheetId=${sheetID}&tipo=all`);
         const data = await response.json();
         
         if (data.status === 'success' && data.registros && data.registros.length > 0) {
@@ -1383,7 +1944,7 @@ async function carregarHistorico() {
         console.error('Erro ao carregar histórico:', error);
         document.getElementById('historicoBody').innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; padding: 40px; color: var(--error);">
+                <td colspan="8" style="text-align: center; padding: 40px; color: var(--error);">
                     ❌ Erro ao carregar histórico. Verifique a conexão e configuração.
                 </td>
             </tr>
@@ -1397,7 +1958,7 @@ function renderizarHistorico(registros) {
     if (registros.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
                     Nenhum registro encontrado com os filtros aplicados.
                 </td>
             </tr>
@@ -1407,7 +1968,7 @@ function renderizarHistorico(registros) {
     }
     
     tbody.innerHTML = '';
-    registros.forEach(reg => {
+    registros.forEach((reg, index) => {
         const row = tbody.insertRow();
         const tipo = String(reg.tipo || '').toLowerCase();
         const unit = tipo === 'agua' ? 'm³' : 'kWh';
@@ -1432,25 +1993,41 @@ function renderizarHistorico(registros) {
             <td style="text-align: right;">${parseFloat(reg.leituraAnterior || 0).toFixed(2)} ${unit}</td>
             <td style="text-align: right; font-weight: 600;">${parseFloat(reg.leituraAtual || 0).toFixed(2)} ${unit}</td>
             <td style="text-align: right; color: var(--success); font-weight: 600;">+${parseFloat(reg.consumoTotal || 0).toFixed(2)} ${unit}</td>
+            <td>
+                <button class="btn btn-edit" onclick="abrirModalEditOnline(${index})" title="Editar">
+                    <span class="material-icons" style="font-size: 14px;">edit</span>
+                </button>
+                <button class="btn btn-danger" onclick="excluirRegistroOnline(${index})" title="Excluir">
+                    <span class="material-icons" style="font-size: 14px;">delete</span>
+                </button>
+            </td>
         `;
     });
     
     document.getElementById('totalRecords').textContent = registros.length;
 }
 
-function toggleCustomDate() {
-    const periodo = document.getElementById('filtroPeriodo').value;
-    const showCustom = periodo === 'custom';
+// BUSCA EM TEMPO REAL
+function buscarRegistros() {
+    const termo = document.getElementById('searchInput').value.toLowerCase();
     
-    document.getElementById('dataInicioGroup').style.display = showCustom ? 'block' : 'none';
-    document.getElementById('dataFimGroup').style.display = showCustom ? 'block' : 'none';
+    let registrosFiltrados = [...todosRegistrosOnline];
+    
+    if (termo) {
+        registrosFiltrados = registrosFiltrados.filter(r => 
+            (r.nome && r.nome.toLowerCase().includes(termo)) ||
+            (r.matricula && r.matricula.toLowerCase().includes(termo))
+        );
+    }
+    
+    aplicarFiltrosAdicionais(registrosFiltrados);
 }
 
-function aplicarFiltros() {
+function aplicarFiltrosAdicionais(registros) {
     const tipoFiltro = document.getElementById('filtroTipo').value;
     const periodoFiltro = document.getElementById('filtroPeriodo').value;
     
-    let registrosFiltrados = [...todosRegistrosOnline];
+    let registrosFiltrados = [...registros];
     
     if (tipoFiltro !== 'all') {
         registrosFiltrados = registrosFiltrados.filter(r => String(r.tipo).toLowerCase() === tipoFiltro);
@@ -1479,11 +2056,58 @@ function aplicarFiltros() {
     renderizarHistorico(registrosFiltrados);
 }
 
+// ORDENAÇÃO DE TABELA
+function ordenarTabela(coluna) {
+    const direcao = sortDirection[coluna] === 'asc' ? 'desc' : 'asc';
+    sortDirection = {};
+    sortDirection[coluna] = direcao;
+    
+    const tbody = document.getElementById('historicoBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        const aValue = a.cells[coluna].textContent.trim();
+        const bValue = b.cells[coluna].textContent.trim();
+        
+        if (direcao === 'asc') {
+            return aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
+        } else {
+            return bValue.localeCompare(aValue, 'pt-BR', { numeric: true });
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Atualizar ícones
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.textContent = 'unfold_more';
+        icon.parentElement.classList.remove('sorted');
+    });
+    
+    const header = document.querySelectorAll('th')[coluna];
+    const icon = header.querySelector('.sort-icon');
+    icon.textContent = direcao === 'asc' ? 'arrow_upward' : 'arrow_downward';
+    header.classList.add('sorted');
+}
+
+function toggleCustomDate() {
+    const periodo = document.getElementById('filtroPeriodo').value;
+    const showCustom = periodo === 'custom';
+    
+    document.getElementById('dataInicioGroup').style.display = showCustom ? 'block' : 'none';
+    document.getElementById('dataFimGroup').style.display = showCustom ? 'block' : 'none';
+}
+
+function aplicarFiltros() {
+    buscarRegistros();
+}
+
 function limparFiltros() {
     document.getElementById('filtroTipo').value = 'all';
     document.getElementById('filtroPeriodo').value = 'all';
     document.getElementById('dataInicio').value = '';
     document.getElementById('dataFim').value = '';
+    document.getElementById('searchInput').value = '';
     toggleCustomDate();
     aplicarFiltros();
 }
@@ -1568,6 +2192,9 @@ async function handleSubmit(event, tipo) {
             if (result.status === 'success') {
                 mostrarAlerta(`alert${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, '✅ Registro salvo ONLINE com sucesso!', 'success');
                 success = true;
+                
+                // Tocar som de sucesso
+                playSuccessSound();
             } else {
                 throw new Error(result.message || 'Erro ao salvar online, salvando offline...');
             }
@@ -1582,7 +2209,7 @@ async function handleSubmit(event, tipo) {
     }
     
     if (success) {
-        await carregarDados(); // Recarrega histórico, estatísticas e leituras anteriores
+        await carregarDados();
     }
     carregarRegistrosPendentes();
     
@@ -1598,10 +2225,24 @@ async function handleSubmit(event, tipo) {
     isProcessing = false;
     btn.disabled = false;
     btn.innerHTML = originalHTML;
+}
 
-    // A chamada carregarDados() já chama calcularEstatisticasGerais(), que atualiza as leituras.
-    // Então, carregarUltimasLeituras() é desnecessário aqui.
-    // carregarUltimasLeituras(); 
+function playSuccessSound() {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
 }
 
 function getRegistrosOffline() {
@@ -1832,6 +2473,7 @@ async function sincronizarRegistrosPendentes() {
     }
 }
 
+// MODAL EDIÇÃO OFFLINE
 function abrirModalEdicao(index) {
     const registros = getRegistrosOffline();
     const reg = registros[index];
@@ -1903,15 +2545,513 @@ function fecharModal() {
     document.getElementById('alertEditModal').classList.remove('show');
 }
 
+// MODAL EDIÇÃO ONLINE
+function abrirModalEditOnline(index) {
+    const registrosFiltrados = obterRegistrosFiltrados();
+    const reg = registrosFiltrados[index];
+    const tipo = reg.tipo;
+    const unit = tipo === 'agua' ? 'm³' : 'kWh';
+
+    document.getElementById('editOnlineRowId').value = index;
+    document.getElementById('editOnlineTipo').value = tipo;
+    
+    document.getElementById('labelEditOnlineLeituraAnterior').textContent = `Leitura Anterior (${unit})`;
+    document.getElementById('labelEditOnlineLeituraAtual').textContent = `Leitura Atual do Medidor (${unit}) *`;
+    document.getElementById('labelEditOnlineConsumoTotal').textContent = `Consumo Total Calculado (${unit})`;
+
+    document.getElementById('editOnlineNome').value = reg.nome;
+    document.getElementById('editOnlineMatricula').value = reg.matricula;
+    
+    const dataHora = new Date(reg.dataHora);
+    const localDate = new Date(dataHora.getTime() - dataHora.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.getElementById('editOnlineDataHora').value = localDate;
+    
+    document.getElementById('editOnlineLeituraAnterior').value = parseFloat(reg.leituraAnterior || 0).toFixed(2);
+    document.getElementById('editOnlineLeituraAtual').value = parseFloat(reg.leituraAtual || 0).toFixed(2);
+    document.getElementById('editOnlineConsumoTotal').value = parseFloat(reg.consumoTotal || 0).toFixed(2);
+    document.getElementById('editOnlineExtra1').value = reg.extra1 || '';
+    document.getElementById('editOnlineExtra2').value = reg.extra2 || '';
+    document.getElementById('editOnlineExtra3').value = reg.extra3 || '';
+    
+    document.getElementById('editOnlineModal').style.display = 'block';
+}
+
+function calcularConsumoModalOnline() {
+    const leituraAtual = parseFloat(document.getElementById('editOnlineLeituraAtual').value) || 0;
+    const leituraAnterior = parseFloat(document.getElementById('editOnlineLeituraAnterior').value) || 0;
+    
+    const consumo = Math.max(0, leituraAtual - leituraAnterior);
+    document.getElementById('editOnlineConsumoTotal').value = consumo.toFixed(2);
+}
+
+async function salvarEdicaoOnline(event) {
+    event.preventDefault();
+
+    if (!scriptURL || !sheetID) {
+        mostrarAlerta('alertEditOnlineModal', 'Configure o sistema primeiro!', 'error');
+        return;
+    }
+
+    const index = parseInt(document.getElementById('editOnlineRowId').value);
+    const registrosFiltrados = obterRegistrosFiltrados();
+    const regOriginal = registrosFiltrados[index];
+    const tipo = document.getElementById('editOnlineTipo').value;
+    
+    calcularConsumoModalOnline();
+
+    const dadosAtualizados = {
+        action: 'updateRecord',
+        sheetId: sheetID,
+        tipo: tipo,
+        rowIndex: todosRegistrosOnline.indexOf(regOriginal) + 2, // +2 porque a planilha começa em 1 e tem cabeçalho
+        nome: document.getElementById('editOnlineNome').value,
+        matricula: document.getElementById('editOnlineMatricula').value,
+        dataHora: document.getElementById('editOnlineDataHora').value,
+        leituraAnterior: parseFloat(document.getElementById('editOnlineLeituraAnterior').value).toFixed(2),
+        leituraAtual: parseFloat(document.getElementById('editOnlineLeituraAtual').value).toFixed(2),
+        consumoTotal: parseFloat(document.getElementById('editOnlineConsumoTotal').value).toFixed(2),
+        extra1: document.getElementById('editOnlineExtra1').value,
+        extra2: document.getElementById('editOnlineExtra2').value,
+        extra3: document.getElementById('editOnlineExtra3').value
+    };
+
+    try {
+        const formData = new FormData();
+        for (const key in dadosAtualizados) {
+            formData.append(key, dadosAtualizados[key]);
+        }
+
+        const response = await fetch(scriptURL, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            mostrarAlerta('alertEditOnlineModal', '✅ Registro atualizado com sucesso!', 'success');
+            setTimeout(async () => {
+                fecharModalEditOnline();
+                await carregarDados();
+            }, 1500);
+        } else {
+            throw new Error(result.message || 'Erro ao atualizar registro');
+        }
+    } catch (error) {
+        mostrarAlerta('alertEditOnlineModal', '❌ Erro ao salvar: ' + error.message, 'error');
+        console.error('Erro:', error);
+    }
+}
+
+function fecharModalEditOnline() {
+    document.getElementById('editOnlineModal').style.display = 'none';
+    document.getElementById('alertEditOnlineModal').classList.remove('show');
+}
+
+async function excluirRegistroOnline(index) {
+    if (!confirm('⚠️ Tem certeza de que deseja EXCLUIR este registro online?\n\nEsta ação é IRREVERSÍVEL!')) {
+        return;
+    }
+
+    if (!scriptURL || !sheetID) {
+        mostrarAlerta('configAlert', 'Configure o sistema primeiro!', 'error');
+        return;
+    }
+
+    const registrosFiltrados = obterRegistrosFiltrados();
+    const reg = registrosFiltrados[index];
+    const tipo = reg.tipo;
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'deleteRecord');
+        formData.append('sheetId', sheetID);
+        formData.append('tipo', tipo);
+        formData.append('rowIndex', todosRegistrosOnline.indexOf(reg) + 2); // +2 porque a planilha começa em 1 e tem cabeçalho
+
+        const response = await fetch(scriptURL, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            mostrarAlerta('configAlert', '✅ Registro excluído com sucesso!', 'success');
+            await carregarDados();
+        } else {
+            throw new Error(result.message || 'Erro ao excluir registro');
+        }
+    } catch (error) {
+        mostrarAlerta('configAlert', '❌ Erro ao excluir: ' + error.message, 'error');
+        console.error('Erro:', error);
+    }
+}
+
+function obterRegistrosFiltrados() {
+    const termo = document.getElementById('searchInput').value.toLowerCase();
+    const tipoFiltro = document.getElementById('filtroTipo').value;
+    const periodoFiltro = document.getElementById('filtroPeriodo').value;
+    
+    let registrosFiltrados = [...todosRegistrosOnline];
+    
+    if (termo) {
+        registrosFiltrados = registrosFiltrados.filter(r => 
+            (r.nome && r.nome.toLowerCase().includes(termo)) ||
+            (r.matricula && r.matricula.toLowerCase().includes(termo))
+        );
+    }
+    
+    if (tipoFiltro !== 'all') {
+        registrosFiltrados = registrosFiltrados.filter(r => String(r.tipo).toLowerCase() === tipoFiltro);
+    }
+    
+    if (periodoFiltro === 'today') {
+        const hoje = new Date().toISOString().split('T')[0];
+        registrosFiltrados = registrosFiltrados.filter(r => {
+            if (!r.dataHora) return false;
+            const dataReg = new Date(r.dataHora).toISOString().split('T')[0];
+            return dataReg === hoje;
+        });
+    } else if (periodoFiltro === 'custom') {
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+        
+        if (dataInicio && dataFim) {
+            registrosFiltrados = registrosFiltrados.filter(r => {
+                if (!r.dataHora) return false;
+                const dataReg = new Date(r.dataHora).toISOString().split('T')[0];
+                return dataReg >= dataInicio && dataReg <= dataFim;
+            });
+        }
+    }
+    
+    return registrosFiltrados;
+}
+
+// GRÁFICOS
+function trocarGrafico(tipo) {
+    currentChartType = tipo;
+    
+    document.querySelectorAll('.chart-tab').forEach(tab => tab.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    atualizarGrafico();
+}
+
+function atualizarGrafico() {
+    if (currentChart) {
+        currentChart.destroy();
+    }
+
+    const ctx = document.getElementById('consumptionChart').getContext('2d');
+    const theme = document.documentElement.getAttribute('data-theme');
+    const textColor = theme === 'dark' ? '#e0e0e0' : '#212121';
+    const gridColor = theme === 'dark' ? '#444' : '#e0e0e0';
+
+    if (currentChartType === 'line') {
+        criarGraficoLinha(ctx, textColor, gridColor);
+    } else if (currentChartType === 'bar') {
+        criarGraficoBarras(ctx, textColor, gridColor);
+    } else if (currentChartType === 'pie') {
+        criarGraficoPizza(ctx, textColor);
+    }
+}
+
+function criarGraficoLinha(ctx, textColor, gridColor) {
+    const ultimos30Dias = [];
+    const consumoAgua = [];
+    const consumoEnergia = [];
+    
+    for (let i = 29; i >= 0; i--) {
+        const data = new Date();
+        data.setDate(data.getDate() - i);
+        const dataStr = toYYYYMMDD(data);
+        ultimos30Dias.push(data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+        
+        const consumo = calcularConsumoDiarioPorData(dataStr);
+        consumoAgua.push(consumo.agua);
+        consumoEnergia.push(consumo.energia);
+    }
+
+    currentChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ultimos30Dias,
+            datasets: [{
+                label: '💧 Água (m³)',
+                data: consumoAgua,
+                borderColor: '#1e88e5',
+                backgroundColor: 'rgba(30, 136, 229, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: '⚡ Energia (kWh)',
+                data: consumoEnergia,
+                borderColor: '#ff6f00',
+                backgroundColor: 'rgba(255, 111, 0, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: textColor }
+                },
+                title: {
+                    display: true,
+                    text: 'Evolução do Consumo - Últimos 30 Dias',
+                    color: textColor,
+                    font: { size: 16 }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                }
+            }
+        }
+    });
+}
+
+function criarGraficoBarras(ctx, textColor, gridColor) {
+    const ultimos7Dias = [];
+    const consumoAgua = [];
+    const consumoEnergia = [];
+    
+    for (let i = 6; i >= 0; i--) {
+        const data = new Date();
+        data.setDate(data.getDate() - i);
+        const dataStr = toYYYYMMDD(data);
+        ultimos7Dias.push(data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }));
+        
+        const consumo = calcularConsumoDiarioPorData(dataStr);
+        consumoAgua.push(consumo.agua);
+        consumoEnergia.push(consumo.energia);
+    }
+
+    currentChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ultimos7Dias,
+            datasets: [{
+                label: '💧 Água (m³)',
+                data: consumoAgua,
+                backgroundColor: '#1e88e5'
+            }, {
+                label: '⚡ Energia (kWh)',
+                data: consumoEnergia,
+                backgroundColor: '#ff6f00'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: textColor }
+                },
+                title: {
+                    display: true,
+                    text: 'Comparativo Semanal',
+                    color: textColor,
+                    font: { size: 16 }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                }
+            }
+        }
+    });
+}
+
+function criarGraficoPizza(ctx, textColor) {
+    let totalAgua = 0;
+    let totalEnergia = 0;
+    
+    todosRegistrosOnline.forEach(reg => {
+        const consumo = parseFloat(reg.consumoTotal || 0);
+        if (reg.tipo === 'agua') {
+            totalAgua += consumo;
+        } else {
+            totalEnergia += consumo;
+        }
+    });
+
+    currentChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['💧 Água', '⚡ Energia'],
+            datasets: [{
+                data: [totalAgua, totalEnergia],
+                backgroundColor: ['#1e88e5', '#ff6f00']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: textColor }
+                },
+                title: {
+                    display: true,
+                    text: 'Distribuição Total do Consumo',
+                    color: textColor,
+                    font: { size: 16 }
+                }
+            }
+        }
+    });
+}
+
+function exportarGrafico() {
+    const canvas = document.getElementById('consumptionChart');
+    const url = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `grafico-consumo-${new Date().toISOString().split('T')[0]}.png`;
+    link.href = url;
+    link.click();
+}
+
+// RELATÓRIOS
+function atualizarRelatorio() {
+    const periodo = parseInt(document.getElementById('relatorioPeriodo').value);
+    let dataInicio;
+    
+    if (periodo === 'all') {
+        dataInicio = new Date(0);
+    } else {
+        dataInicio = new Date();
+        dataInicio.setDate(dataInicio.getDate() - periodo);
+    }
+    
+    const registrosFiltrados = todosRegistrosOnline.filter(r => {
+        const dataReg = new Date(r.dataHora);
+        return dataReg >= dataInicio;
+    });
+    
+    let totalAgua = 0;
+    let totalEnergia = 0;
+    
+    registrosFiltrados.forEach(reg => {
+        const consumo = parseFloat(reg.consumoTotal || 0);
+        if (reg.tipo === 'agua') {
+            totalAgua += consumo;
+        } else {
+            totalEnergia += consumo;
+        }
+    });
+    
+    const dias = periodo === 'all' ? Math.max(1, Math.ceil((new Date() - new Date(registrosFiltrados[0]?.dataHora || new Date())) / (1000 * 60 * 60 * 24))) : periodo;
+    const mediaAgua = totalAgua / dias;
+    const mediaEnergia = totalEnergia / dias;
+    
+    document.getElementById('relatorioTotalAgua').textContent = totalAgua.toFixed(2) + ' m³';
+    document.getElementById('relatorioTotalEnergia').textContent = totalEnergia.toFixed(2) + ' kWh';
+    document.getElementById('relatorioMediaAgua').textContent = mediaAgua.toFixed(2) + ' m³/dia';
+    document.getElementById('relatorioMediaEnergia').textContent = mediaEnergia.toFixed(2) + ' kWh/dia';
+}
+
+function gerarRelatorioPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text('Relatório de Consumo', 105, 15, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 105, 25, { align: 'center' });
+    
+    let y = 40;
+    
+    doc.setFontSize(14);
+    doc.text('Resumo Geral', 20, y);
+    y += 10;
+    
+    doc.setFontSize(11);
+    doc.text(`💧 Total Água: ${document.getElementById('relatorioTotalAgua').textContent}`, 20, y);
+    y += 7;
+    doc.text(`⚡ Total Energia: ${document.getElementById('relatorioTotalEnergia').textContent}`, 20, y);
+    y += 7;
+    doc.text(`📊 Média Diária Água: ${document.getElementById('relatorioMediaAgua').textContent}`, 20, y);
+    y += 7;
+    doc.text(`📊 Média Diária Energia: ${document.getElementById('relatorioMediaEnergia').textContent}`, 20, y);
+    y += 15;
+    
+    doc.setFontSize(14);
+    doc.text('Últimos 10 Registros', 20, y);
+    y += 10;
+    
+    const ultimos10 = todosRegistrosOnline.slice(-10);
+    
+    doc.setFontSize(9);
+    ultimos10.forEach(reg => {
+        const tipo = reg.tipo === 'agua' ? '💧 Água' : '⚡ Energia';
+        const data = new Date(reg.dataHora).toLocaleDateString('pt-BR');
+        const linha = `${tipo} | ${data} | ${reg.nome} | ${parseFloat(reg.consumoTotal || 0).toFixed(2)}`;
+        doc.text(linha, 20, y);
+        y += 6;
+        
+        if (y > 270) {
+            doc.addPage();
+            y = 20;
+        }
+    });
+    
+    doc.save(`relatorio-consumo-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+function exportarCSV() {
+    let csv = 'Tipo,Data/Hora,Nome,Matrícula,Leitura Anterior,Leitura Atual,Consumo Total\n';
+    
+    todosRegistrosOnline.forEach(reg => {
+        const tipo = reg.tipo === 'agua' ? 'Água' : 'Energia';
+        const dataHora = new Date(reg.dataHora).toLocaleString('pt-BR');
+        const linha = `${tipo},"${dataHora}","${reg.nome}","${reg.matricula}",${reg.leituraAnterior},${reg.leituraAtual},${reg.consumoTotal}\n`;
+        csv += linha;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `dados-consumo-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
 window.onclick = function(event) {
-    const modal = document.getElementById('editModal');
-    if (event.target === modal) {
+    const editModal = document.getElementById('editModal');
+    const editOnlineModal = document.getElementById('editOnlineModal');
+    
+    if (event.target === editModal) {
         fecharModal();
+    }
+    if (event.target === editOnlineModal) {
+        fecharModalEditOnline();
     }
 }
 
 function mostrarAlerta(elementId, mensagem, tipo) {
     const alert = document.getElementById(elementId);
+    if (!alert) return;
+    
     alert.className = `alert alert-${tipo} show`;
     alert.innerHTML = `
         <span class="material-icons">${tipo === 'success' ? 'check_circle' : (tipo === 'warning' ? 'warning' : 'error')}</span>
