@@ -374,7 +374,7 @@
     .stat-value-currency {
         font-size: 32px;
         font-weight: 700;
-        color: var(--success); /* Cor para valores monetários */
+        color: var(--success);
     }
 
     .trend-indicator {
@@ -738,6 +738,15 @@
         font-family: monospace;
         color: var(--text-color);
     }
+
+    .formula-card {
+        transition: all 0.3s;
+    }
+
+    .formula-card:has(input:checked) {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.1);
+    }
     
     @keyframes spin {
         to { transform: rotate(360deg); }
@@ -949,26 +958,27 @@
                 <span class="material-icons" style="color: var(--success);">paid</span>
                 <h2>Estimativa de Custo de Consumo (Tarifas Manaus/AM)</h2>
             </div>
+            <div class="card-actions">
+                <button class="btn btn-secondary" onclick="salvarFormulaEscolhida()">
+                    <span class="material-icons">save</span>
+                    Salvar Fórmula
+                </button>
+            </div>
         </div>
 
         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
             <div class="form-group">
-                <label title="Valor cobrado por m³ na faixa mais comum (ex: R$ 4,50)">💧 Tarifa Água p/ m³</label>
-                <input type="number" id="tarifaAgua" step="0.01" value="4.50" oninput="calcularCustoEstimado()">
+                <label>Tipo de Cálculo</label>
+                <select id="tipoCalculo" onchange="alterarTipoCalculo()">
+                    <option value="dias">Por Dias</option>
+                    <option value="mes">Por Mês Específico</option>
+                </select>
             </div>
-            <div class="form-group">
-                <label title="Valor cobrado por kWh na faixa mais comum (ex: R$ 0,80)">⚡ Tarifa Energia p/ kWh</label>
-                <input type="number" id="tarifaEnergia" step="0.01" value="0.80" oninput="calcularCustoEstimado()">
+            <div class="form-group" id="seletorMes" style="display: none;">
+                <label>Selecione o Mês</label>
+                <input type="month" id="mesEscolhido" onchange="calcularCustoEstimado()">
             </div>
-            <div class="form-group">
-                <label title="Taxa de Esgoto/Disponibilidade em % (ex: 80% do valor da água)">💧 Taxa/Esgoto (%)</label>
-                <input type="number" id="taxaEsgoto" step="0.01" value="80" oninput="calcularCustoEstimado()">
-            </div>
-            <div class="form-group">
-                <label title="Impostos e Contribuições em % (ex: 18% para o ICMS/PIS/COFINS)">⚡ Impostos/Taxas (%)</label>
-                <input type="number" id="impostoEnergia" step="0.01" value="18" oninput="calcularCustoEstimado()">
-            </div>
-            <div class="form-group">
+            <div class="form-group" id="seletorPeriodo">
                 <label>Período de Cálculo</label>
                 <select id="periodoCalculo" onchange="calcularCustoEstimado()">
                     <option value="today">Diário (Consumo Hoje)</option>
@@ -976,6 +986,107 @@
                     <option value="30" selected>Mensal (Últimos 30 dias)</option>
                     <option value="all">Total Acumulado</option>
                 </select>
+            </div>
+        </div>
+
+        <div style="background: var(--light); padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--text-color);">
+                <span class="material-icons" style="vertical-align: middle;">calculate</span>
+                Escolha a Fórmula de Cálculo
+            </h3>
+            
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="formula-card" style="background: var(--card-bg); padding: 15px; border-radius: 8px; border: 2px solid var(--border);">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="formulaEscolhida" value="simples" checked onchange="calcularCustoEstimado()" style="margin-right: 10px;">
+                        <div>
+                            <strong>Fórmula Simplificada</strong>
+                            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">
+                                💧 Água: (Consumo × Tarifa) + Taxa Esgoto<br>
+                                ⚡ Energia: (Consumo × Tarifa) + Impostos
+                            </p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="formula-card" style="background: var(--card-bg); padding: 15px; border-radius: 8px; border: 2px solid var(--border);">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="formulaEscolhida" value="detalhada" onchange="calcularCustoEstimado()" style="margin-right: 10px;">
+                        <div>
+                            <strong>Fórmula Detalhada</strong>
+                            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">
+                                Inclui todas as taxas adicionais e encargos setoriais
+                            </p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div id="parametrosDetalhados" style="display: none; background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--text-color);">
+                <span class="material-icons" style="vertical-align: middle;">tune</span>
+                Parâmetros Detalhados
+            </h3>
+            
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="form-group">
+                    <label title="Valor cobrado por m³ na faixa mais comum">💧 Tarifa Base Água (R$/m³)</label>
+                    <input type="number" id="tarifaAgua" step="0.01" value="4.50" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="Taxa de esgoto sobre o valor da água">💧 Taxa Esgoto (%)</label>
+                    <input type="number" id="taxaEsgoto" step="0.01" value="80" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="Taxa de disponibilidade mínima">💧 Taxa Disponibilidade (R$)</label>
+                    <input type="number" id="taxaDisponibilidadeAgua" step="0.01" value="25.00" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="PIS sobre água">💧 PIS Água (%)</label>
+                    <input type="number" id="pisAgua" step="0.01" value="1.65" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="COFINS sobre água">💧 COFINS Água (%)</label>
+                    <input type="number" id="cofinsAgua" step="0.01" value="7.60" oninput="calcularCustoEstimado()">
+                </div>
+            </div>
+
+            <hr style="margin: 20px 0; border: 1px solid var(--border);">
+
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="form-group">
+                    <label title="Valor cobrado por kWh">⚡ Tarifa Base Energia (R$/kWh)</label>
+                    <input type="number" id="tarifaEnergia" step="0.01" value="0.80" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="Tarifa de uso do sistema de distribuição">⚡ TUSD (R$/kWh)</label>
+                    <input type="number" id="tusd" step="0.01" value="0.35" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="Tarifa de uso do sistema de transmissão">⚡ TUST (R$/kWh)</label>
+                    <input type="number" id="tust" step="0.01" value="0.05" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="Bandeira tarifária adicional">⚡ Bandeira Tarifária (R$/kWh)</label>
+                    <input type="number" id="bandeiraTarifaria" step="0.01" value="0.00" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="ICMS sobre energia">⚡ ICMS (%)</label>
+                    <input type="number" id="icmsEnergia" step="0.01" value="18.00" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="PIS sobre energia">⚡ PIS Energia (%)</label>
+                    <input type="number" id="pisEnergia" step="0.01" value="1.65" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="COFINS sobre energia">⚡ COFINS Energia (%)</label>
+                    <input type="number" id="cofinsEnergia" step="0.01" value="7.60" oninput="calcularCustoEstimado()">
+                </div>
+                <div class="form-group">
+                    <label title="Contribuição de Iluminação Pública">⚡ CIP (R$)</label>
+                    <input type="number" id="cipEnergia" step="0.01" value="15.00" oninput="calcularCustoEstimado()">
+                </div>
             </div>
         </div>
 
@@ -990,20 +1101,31 @@
             </div>
             <div class="stat-card">
                 <div class="stat-icon" style="color: var(--primary);">💧</div>
-                <div class="stat-label">Custo Estimado Água (c/ Taxas)</div>
+                <div class="stat-label">Custo Estimado Água</div>
                 <div class="stat-value-currency" id="custoEstimadoAgua">R$ 0,00</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon" style="color: var(--accent);">⚡</div>
-                <div class="stat-label">Custo Estimado Energia (c/ Impostos)</div>
+                <div class="stat-label">Custo Estimado Energia</div>
                 <div class="stat-value-currency" id="custoEstimadoEnergia">R$ 0,00</div>
             </div>
         </div>
+
+        <div id="detalhamentoCalculo" style="background: var(--light); padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--text-color);">
+                <span class="material-icons" style="vertical-align: middle;">receipt_long</span>
+                Detalhamento do Cálculo
+            </h3>
+            <div id="breakdownAgua" style="margin-bottom: 20px;"></div>
+            <div id="breakdownEnergia"></div>
+        </div>
+
         <div class="alert alert-warning show" style="display: flex; margin-top: 20px; font-size: 13px;">
             <span class="material-icons">info</span>
-            ⚠️ **Importante:** Este é um **Cálculo de Custo Estimado e Simplificado**, usando apenas uma tarifa média (não por faixas). Ele serve como referência e não substitui a fatura oficial da concessionária (Águas de Manaus/Amazonas Energia).
+            ⚠️ **Importante:** Este é um **Cálculo de Custo Estimado**. Os valores reais podem variar conforme faixas de consumo, ajustes tarifários e bandeiras. Este cálculo não substitui a fatura oficial da concessionária (Águas de Manaus/Amazonas Energia).
         </div>
     </div>
+    
     <div class="card">
         <div class="card-header">
             <div class="card-title">
@@ -1558,7 +1680,6 @@ let currentChartType = 'line';
 let sortDirection = {};
 let nomesUnicos = new Set();
 let matriculasUnicas = new Set();
-/** NOVO: Mapa para associação Nome -> Matrícula */
 let nomeMatriculaMap = new Map(); 
 
 window.onload = function() {
@@ -1566,10 +1687,8 @@ window.onload = function() {
     setDataHoraAtual();
     setInterval(atualizarRelogio, 1000);
     carregarTema();
+    carregarFormulasSalvas();
     
-    // O inicializarAutocomplete agora é chamado no carregarDados
-    // pois depende dos dados online para a sugestão cruzada.
-
     const nomeInputs = document.querySelectorAll('input[name="nome"]');
     const matriculaInputs = document.querySelectorAll('input[name="matricula"]');
     
@@ -1590,8 +1709,11 @@ window.onload = function() {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const today = now.toISOString().split('T')[0];
+    const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
     document.getElementById('dailyDataInicio').value = firstDay;
     document.getElementById('dailyDataFim').value = today;
+    document.getElementById('mesEscolhido').value = mesAtual;
 
     if (scriptURL && sheetID) {
         carregarDados();
@@ -1599,12 +1721,16 @@ window.onload = function() {
 
     carregarRegistrosPendentes();
     setupKeyboardShortcuts();
-    
-    // Inicializa o cálculo de custo ao carregar a página
     calcularCustoEstimado(); 
+    
+    document.querySelectorAll('input[name="formulaEscolhida"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const detalhados = document.getElementById('parametrosDetalhados');
+            detalhados.style.display = this.value === 'detalhada' ? 'block' : 'none';
+        });
+    });
 };
 
-// TEMA ESCURO/CLARO
 function toggleTheme() {
     const currentTheme = document.documentElement.getAttribute('data-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -1644,22 +1770,18 @@ function carregarTema() {
     }
 }
 
-// ATALHOS DE TECLADO
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', function(e) {
-        // Ctrl+S: Salvar configuração
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
             salvarConfiguracao();
         }
         
-        // Esc: Fechar modals
         if (e.key === 'Escape') {
             fecharModal();
             fecharModalEditOnline();
         }
         
-        // ?: Mostrar atalhos
         if (e.key === '?') {
             const shortcuts = document.getElementById('keyboardShortcuts');
             shortcuts.classList.toggle('show');
@@ -1667,7 +1789,6 @@ function setupKeyboardShortcuts() {
     });
 }
 
-// AUTOCOMPLETE
 function inicializarAutocomplete() {
     const inputsNome = ['nomeAgua', 'nomeEnergia'];
     const inputsMatricula = ['matriculaAgua', 'matriculaEnergia'];
@@ -1677,7 +1798,6 @@ function inicializarAutocomplete() {
         if (input) {
             input.addEventListener('input', function() {
                 const tipo = id.includes('Agua') ? 'Agua' : 'Energia';
-                // O autocomplete para nomes agora chama a função com o ID do input de matrícula
                 mostrarAutocomplete(this.value, 'nome', 'autocompleteNome' + tipo, id, 'matricula' + tipo);
             });
         }
@@ -1694,13 +1814,6 @@ function inicializarAutocomplete() {
     });
 }
 
-/** * Função atualizada para incluir preenchimento cruzado (Nome -> Matrícula) 
- * @param {string} valor - O valor atual do campo de entrada.
- * @param {string} tipo - 'nome' ou 'matricula'.
- * @param {string} autocompleteId - O ID do div de autocomplete.
- * @param {string} inputId - O ID do input que disparou o evento.
- * @param {string} [relatedInputId] - O ID do input relacionado (matrícula se o tipo for nome).
- */
 function mostrarAutocomplete(valor, tipo, autocompleteId, inputId, relatedInputId) {
     const autocompleteDiv = document.getElementById(autocompleteId);
     if (!autocompleteDiv) return;
@@ -1721,7 +1834,6 @@ function mostrarAutocomplete(valor, tipo, autocompleteId, inputId, relatedInputI
         div.textContent = item;
         
         if (tipo === 'nome' && relatedInputId && nomeMatriculaMap.has(item)) {
-            // Adiciona a matrícula sugerida ao lado do nome (melhor feedback visual)
             div.innerHTML += ` <small style="color: var(--primary); opacity: 0.7;">(${nomeMatriculaMap.get(item)})</small>`;
         }
         
@@ -1729,7 +1841,6 @@ function mostrarAutocomplete(valor, tipo, autocompleteId, inputId, relatedInputI
             document.getElementById(inputId).value = item;
             autocompleteDiv.innerHTML = '';
             
-            // Lógica do preenchimento cruzado: Se um nome foi selecionado e tem matrícula associada.
             if (tipo === 'nome' && relatedInputId && nomeMatriculaMap.has(item)) {
                 const matriculaInput = document.getElementById(relatedInputId);
                 if (matriculaInput) {
@@ -1750,17 +1861,13 @@ function atualizarAutocomplete() {
         if (reg.nome) nomesUnicos.add(reg.nome);
         if (reg.matricula) matriculasUnicas.add(reg.matricula);
 
-        // Atualiza o mapa com a última matrícula registrada para o nome
         if (reg.nome && reg.matricula) {
-            // Como os registros vêm ordenados por data (do mais antigo para o mais novo)
-            // o último registro sobrescreve o anterior, garantindo a matrícula mais recente.
             nomeMatriculaMap.set(reg.nome, reg.matricula);
         }
     });
     
-    inicializarAutocomplete(); // Inicializa os listeners após a atualização dos dados
+    inicializarAutocomplete();
 }
-// FIM AUTOCOMPLETE NOVO
 
 function setDataHoraAtual() {
     const now = new Date();
@@ -1850,18 +1957,15 @@ async function testarConexao() {
 async function carregarDados() {
     await carregarHistorico();
     calcularEstatisticasGerais();
-    atualizarAutocomplete(); // Chamada aqui para garantir que os dados de nome/matrícula estejam prontos
+    atualizarAutocomplete();
     atualizarGrafico();
     atualizarRelatorio();
-    calcularCustoEstimado(); // NOVO: Recalcula o custo após carregar novos dados
+    calcularCustoEstimado();
 }
 
 function calcularEstatisticasGerais() {
     let totalAguaLeitura = 0;
     let totalEnergiaLeitura = 0;
-    let totalConsumoAgua = 0;
-    let totalConsumoEnergia = 0;
-    let primeiraData = null;
 
     if (todosRegistrosOnline.length === 0) {
         leituraAnteriorAgua = 0;
@@ -1883,26 +1987,20 @@ function calcularEstatisticasGerais() {
     if (registrosAgua.length > 0) {
         const ultimoAgua = registrosAgua[registrosAgua.length - 1];
         totalAguaLeitura = parseFloat(ultimoAgua.leituraAtual || 0);
-        const primeiroAgua = registrosAgua[0];
-        totalConsumoAgua = totalAguaLeitura - parseFloat(primeiroAgua.leituraAnterior || 0);
-        primeiraData = new Date(primeiroAgua.dataHora);
     }
     
     if (registrosEnergia.length > 0) {
         const ultimoEnergia = registrosEnergia[registrosEnergia.length - 1];
         totalEnergiaLeitura = parseFloat(ultimoEnergia.leituraAtual || 0);
-        const primeiroEnergia = registrosEnergia[0];
-        totalConsumoEnergia = totalEnergiaLeitura - parseFloat(primeiroEnergia.leituraAnterior || 0);
-        if (!primeiraData) primeiraData = new Date(primeiroEnergia.dataHora);
     }
 
     leituraAnteriorAgua = totalAguaLeitura;
     leituraAnteriorEnergia = totalEnergiaLeitura;
 
-    document.getElementById('leituraAnteriorAgua').value = leituraAnteriorAgua.toFixed(2);
-    document.getElementById('leituraAnteriorEnergia').value = leituraAnteriorEnergia.toFixed(2);
-    document.getElementById('leituraAtualAgua').value = leituraAnteriorAgua.toFixed(2);
-    document.getElementById('leituraAtualEnergia').value = leituraAnteriorEnergia.toFixed(2);
+    document.getElementById('leituraAnteriorAgua').value = totalAguaLeitura.toFixed(2);
+    document.getElementById('leituraAnteriorEnergia').value = totalEnergiaLeitura.toFixed(2);
+    document.getElementById('leituraAtualAgua').value = totalAguaLeitura.toFixed(2);
+    document.getElementById('leituraAtualEnergia').value = totalEnergiaLeitura.toFixed(2);
 
     document.getElementById('totalAgua').textContent = totalAguaLeitura.toFixed(2) + ' m³';
     document.getElementById('totalEnergia').textContent = totalEnergiaLeitura.toFixed(2) + ' kWh';
@@ -1911,9 +2009,7 @@ function calcularEstatisticasGerais() {
     document.getElementById('consumoHojeAgua').textContent = (consumoHoje.agua || 0).toFixed(2) + ' m³';
     document.getElementById('consumoHojeEnergia').textContent = (consumoHoje.energia || 0).toFixed(2) + ' kWh';
 
-    // Calcular tendência
     calcularTendencia();
-    
     calcularConsumo('agua');
     calcularConsumo('energia');
 }
@@ -1960,10 +2056,6 @@ function toYYYYMMDD(date) {
     return d.toISOString().split('T')[0];
 }
 
-/**
- * Função Reforçada: Calcula o consumo diário como a diferença entre a 
- * última Leitura Atual do dia e a Leitura Anterior do primeiro registro do dia.
- */
 function calcularConsumoDiarioPorData(dataString) {
     const registrosDoDia = todosRegistrosOnline
         .filter(r => toYYYYMMDD(r.dataHora) === dataString)
@@ -1975,26 +2067,17 @@ function calcularConsumoDiarioPorData(dataString) {
     const regAgua = registrosDoDia.filter(r => r.tipo === 'agua');
     const regEnergia = registrosDoDia.filter(r => r.tipo === 'energia');
 
-    // Cálculo para Água
     if (regAgua.length > 0) {
-        // A Leitura Anterior do primeiro registro do dia é o ponto de partida
-        const leituraInicioDoDia = parseFloat(regAgua[0].leituraAnterior || 0);
-        // A Leitura Atual do último registro do dia é o ponto de chegada
-        const leituraFimDoDia = parseFloat(regAgua[regAgua.length - 1].leituraAtual || 0);
-        
-        // Consumo Diário = Ponto de Chegada - Ponto de Partida
-        consumoAgua = Math.max(0, leituraFimDoDia - leituraInicioDoDia);
+        // Encontrar a primeira leitura anterior do dia e a última leitura atual
+        const primeiraLeituraAnterior = parseFloat(regAgua[0].leituraAnterior || 0);
+        const ultimaLeituraAtual = parseFloat(regAgua[regAgua.length - 1].leituraAtual || 0);
+        consumoAgua = Math.max(0, ultimaLeituraAtual - primeiraLeituraAnterior);
     }
     
-    // Cálculo para Energia
     if (regEnergia.length > 0) {
-        // A Leitura Anterior do primeiro registro do dia é o ponto de partida
-        const leituraInicioDoDia = parseFloat(regEnergia[0].leituraAnterior || 0);
-        // A Leitura Atual do último registro do dia é o ponto de chegada
-        const leituraFimDoDia = parseFloat(regEnergia[regEnergia.length - 1].leituraAtual || 0);
-        
-        // Consumo Diário = Ponto de Chegada - Ponto de Partida
-        consumoEnergia = Math.max(0, leituraFimDoDia - leituraInicioDoDia);
+        const primeiraLeituraAnterior = parseFloat(regEnergia[0].leituraAnterior || 0);
+        const ultimaLeituraAtual = parseFloat(regEnergia[regEnergia.length - 1].leituraAtual || 0);
+        consumoEnergia = Math.max(0, ultimaLeituraAtual - primeiraLeituraAnterior);
     }
 
     return { agua: consumoAgua, energia: consumoEnergia };
@@ -2056,7 +2139,6 @@ async function carregarHistorico() {
         const data = await response.json();
         
         if (data.status === 'success' && data.registros && data.registros.length > 0) {
-            // Garante que os registros mais antigos são os primeiros para o mapeamento Nome->Matrícula
             todosRegistrosOnline = data.registros.sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
             aplicarFiltros();
         } else {
@@ -2086,143 +2168,108 @@ function renderizarHistorico(registros) {
                 </td>
             </tr>
         `;
-        document.getElementById('totalRecords').textContent = '0';
+        document.getElementById('totalRecords').textContent = todosRegistrosOnline.length.toString();
         return;
     }
     
-    tbody.innerHTML = '';
-    registros.forEach((reg, index) => {
-        const row = tbody.insertRow();
-        const tipo = String(reg.tipo || '').toLowerCase();
-        const unit = tipo === 'agua' ? 'm³' : 'kWh';
-        
-        let dataFormatada = 'Data Inválida';
-        if (reg.dataHora) {
-            try {
-                const d = new Date(reg.dataHora);
-                if (!isNaN(d.getTime())) {
-                    dataFormatada = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                }
-            } catch (e) {
-                console.error('Erro ao formatar data:', e);
-            }
-        }
-        
-        row.innerHTML = `
-            <td><span class="badge badge-${tipo}">${tipo === 'agua' ? '💧 Água' : '⚡ Energia'}</span></td>
-            <td>${dataFormatada}</td>
-            <td>${String(reg.nome || 'N/A')}</td>
-            <td>${String(reg.matricula || 'N/A')}</td>
-            <td style="text-align: right;">${parseFloat(reg.leituraAnterior || 0).toFixed(2)} ${unit}</td>
-            <td style="text-align: right; font-weight: 600;">${parseFloat(reg.leituraAtual || 0).toFixed(2)} ${unit}</td>
-            <td style="text-align: right; color: var(--success); font-weight: 600;">+${parseFloat(reg.consumoTotal || 0).toFixed(2)} ${unit}</td>
-            <td>
-                <button class="btn btn-edit" onclick="abrirModalEditOnline(${index})" title="Editar">
-                    <span class="material-icons" style="font-size: 14px;">edit</span>
-                </button>
-                <button class="btn btn-danger" onclick="excluirRegistroOnline(${index})" title="Excluir">
-                    <span class="material-icons" style="font-size: 14px;">delete</span>
-                </button>
-            </td>
+    let html = '';
+    registros.forEach(registro => {
+        const badgeClass = registro.tipo === 'agua' ? 'badge-agua' : 'badge-energia';
+        const unidade = registro.tipo === 'agua' ? 'm³' : 'kWh';
+
+        // O rowId é o identificador da linha na planilha, essencial para edição/exclusão online
+        const rowId = registro.rowId || 'N/A'; 
+
+        html += `
+            <tr data-row-id="${rowId}" data-tipo="${registro.tipo}">
+                <td><span class="badge ${badgeClass}">${registro.tipo.toUpperCase()}</span></td>
+                <td>${new Date(registro.dataHora).toLocaleDateString('pt-BR')} ${new Date(registro.dataHora).toLocaleTimeString('pt-BR').substring(0, 5)}</td>
+                <td>${registro.nome || 'N/A'}</td>
+                <td>${registro.matricula || 'N/A'}</td>
+                <td style="text-align: right;">${parseFloat(registro.leituraAnterior).toFixed(2)} ${unidade}</td>
+                <td style="text-align: right;">${parseFloat(registro.leituraAtual).toFixed(2)} ${unidade}</td>
+                <td style="text-align: right;">${parseFloat(registro.consumoTotal).toFixed(2)} ${unidade}</td>
+                <td>
+                    <button class="btn btn-edit" onclick="abrirModalEditOnline('${rowId}', '${registro.tipo}')" title="Editar Online">
+                        <span class="material-icons" style="font-size: 16px;">edit</span>
+                    </button>
+                    <button class="btn btn-danger" onclick="deletarRegistroOnline('${rowId}', '${registro.tipo}')" title="Excluir Online">
+                        <span class="material-icons" style="font-size: 16px;">delete</span>
+                    </button>
+                </td>
+            </tr>
         `;
     });
-    
-    document.getElementById('totalRecords').textContent = registros.length;
-}
 
-// BUSCA EM TEMPO REAL
-function buscarRegistros() {
-    const termo = document.getElementById('searchInput').value.toLowerCase();
-    
-    let registrosFiltrados = [...todosRegistrosOnline];
-    
-    if (termo) {
-        registrosFiltrados = registrosFiltrados.filter(r => 
-            (r.nome && r.nome.toLowerCase().includes(termo)) ||
-            (r.matricula && r.matricula.toLowerCase().includes(termo))
-        );
-    }
-    
-    aplicarFiltrosAdicionais(registrosFiltrados);
-}
-
-function aplicarFiltrosAdicionais(registros) {
-    const tipoFiltro = document.getElementById('filtroTipo').value;
-    const periodoFiltro = document.getElementById('filtroPeriodo').value;
-    
-    let registrosFiltrados = [...registros];
-    
-    if (tipoFiltro !== 'all') {
-        registrosFiltrados = registrosFiltrados.filter(r => String(r.tipo).toLowerCase() === tipoFiltro);
-    }
-    
-    if (periodoFiltro === 'today') {
-        const hoje = new Date().toISOString().split('T')[0];
-        registrosFiltrados = registrosFiltrados.filter(r => {
-            if (!r.dataHora) return false;
-            const dataReg = new Date(r.dataHora).toISOString().split('T')[0];
-            return dataReg === hoje;
-        });
-    } else if (periodoFiltro === 'custom') {
-        const dataInicio = document.getElementById('dataInicio').value;
-        const dataFim = document.getElementById('dataFim').value;
-        
-        if (dataInicio && dataFim) {
-            registrosFiltrados = registrosFiltrados.filter(r => {
-                if (!r.dataHora) return false;
-                const dataReg = new Date(r.dataHora).toISOString().split('T')[0];
-                return dataReg >= dataInicio && dataReg <= dataFim;
-            });
-        }
-    }
-    
-    renderizarHistorico(registrosFiltrados);
-}
-
-// ORDENAÇÃO DE TABELA
-function ordenarTabela(coluna) {
-    const direcao = sortDirection[coluna] === 'asc' ? 'desc' : 'asc';
-    sortDirection = {};
-    sortDirection[coluna] = direcao;
-    
-    const tbody = document.getElementById('historicoBody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    
-    rows.sort((a, b) => {
-        const aValue = a.cells[coluna].textContent.trim();
-        const bValue = b.cells[coluna].textContent.trim();
-        
-        if (direcao === 'asc') {
-            return aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
-        } else {
-            return bValue.localeCompare(aValue, 'pt-BR', { numeric: true });
-        }
-    });
-    
-    rows.forEach(row => tbody.appendChild(row));
-    
-    // Atualizar ícones
-    document.querySelectorAll('.sort-icon').forEach(icon => {
-        icon.textContent = 'unfold_more';
-        icon.parentElement.classList.remove('sorted');
-    });
-    
-    const header = document.querySelectorAll('th')[coluna];
-    const icon = header.querySelector('.sort-icon');
-    icon.textContent = direcao === 'asc' ? 'arrow_upward' : 'arrow_downward';
-    header.classList.add('sorted');
+    tbody.innerHTML = html;
+    document.getElementById('totalRecords').textContent = todosRegistrosOnline.length.toString();
 }
 
 function toggleCustomDate() {
     const periodo = document.getElementById('filtroPeriodo').value;
-    const showCustom = periodo === 'custom';
+    const inicio = document.getElementById('dataInicioGroup');
+    const fim = document.getElementById('dataFimGroup');
     
-    document.getElementById('dataInicioGroup').style.display = showCustom ? 'block' : 'none';
-    document.getElementById('dataFimGroup').style.display = showCustom ? 'block' : 'none';
+    if (periodo === 'custom') {
+        inicio.style.display = 'block';
+        fim.style.display = 'block';
+    } else {
+        inicio.style.display = 'none';
+        fim.style.display = 'none';
+    }
 }
 
 function aplicarFiltros() {
-    buscarRegistros();
+    const tipo = document.getElementById('filtroTipo').value;
+    const periodo = document.getElementById('filtroPeriodo').value;
+    const dataInicioStr = document.getElementById('dataInicio').value;
+    const dataFimStr = document.getElementById('dataFim').value;
+    const termoBusca = document.getElementById('searchInput').value.toLowerCase().trim();
+
+    let registrosFiltrados = todosRegistrosOnline;
+
+    // 1. Filtrar por Tipo
+    if (tipo !== 'all') {
+        registrosFiltrados = registrosFiltrados.filter(r => r.tipo === tipo);
+    }
+
+    // 2. Filtrar por Período
+    const hoje = new Date();
+    let dataLimite = null;
+
+    if (periodo === 'today') {
+        dataLimite = new Date(hoje.setHours(0, 0, 0, 0));
+    } else if (periodo === 'custom' && dataInicioStr && dataFimStr) {
+        const dI = new Date(dataInicioStr);
+        const dF = new Date(dataFimStr);
+        registrosFiltrados = registrosFiltrados.filter(r => {
+            const rDate = new Date(r.dataHora);
+            return rDate >= dI && rDate <= dF;
+        });
+    } else if (periodo !== 'all' && periodo !== 'custom') {
+        const dias = parseInt(periodo, 10);
+        dataLimite = new Date(hoje.setDate(hoje.getDate() - dias));
+    }
+
+    if (dataLimite) {
+        registrosFiltrados = registrosFiltrados.filter(r => new Date(r.dataHora) >= dataLimite);
+    }
+
+    // 3. Filtrar por Busca (Nome/Matrícula)
+    if (termoBusca) {
+        registrosFiltrados = registrosFiltrados.filter(r => 
+            (r.nome && r.nome.toLowerCase().includes(termoBusca)) ||
+            (r.matricula && r.matricula.toLowerCase().includes(termoBusca))
+        );
+    }
+
+    renderizarHistorico(registrosFiltrados);
+}
+
+function buscarRegistros() {
+    // A função buscarRegistros apenas chama aplicarFiltros para que a busca em tempo real funcione
+    // em conjunto com os filtros de Tipo e Período já selecionados.
+    aplicarFiltros();
 }
 
 function limparFiltros() {
@@ -2235,1045 +2282,1004 @@ function limparFiltros() {
     aplicarFiltros();
 }
 
-function calcularConsumo(tipo) {
-    const leituraAtualInput = document.getElementById(`leituraAtual${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
-    const consumoTotalInput = document.getElementById(`consumoTotal${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+function ordenarTabela(colIndex) {
+    const tabela = document.getElementById('historicoTable');
+    const th = tabela.tHead.rows[0].cells[colIndex];
+    const tbody = tabela.tBodies[0];
+    const linhas = Array.from(tbody.rows);
+    const tipoAtual = th.getAttribute('data-tipo') || 'string';
+
+    const dir = sortDirection[colIndex] === 'asc' ? 'desc' : 'asc';
+    sortDirection = {}; // Limpa as outras ordenações
+    sortDirection[colIndex] = dir;
+
+    // Atualiza ícones de ordenação
+    tabela.querySelectorAll('th').forEach((header, index) => {
+        const icon = header.querySelector('.sort-icon');
+        header.classList.remove('sorted');
+        icon.textContent = 'unfold_more';
+        if (index === colIndex) {
+            header.classList.add('sorted');
+            icon.textContent = dir === 'asc' ? 'arrow_drop_up' : 'arrow_drop_down';
+        }
+    });
+
+    // Função de comparação
+    const comparador = (a, b) => {
+        let aVal = a.cells[colIndex].textContent.trim();
+        let bVal = b.cells[colIndex].textContent.trim();
+        
+        // Trata a coluna Data/Hora (índice 1) para ordenação correta
+        if (colIndex === 1) {
+             aVal = new Date(aVal.replace(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/, '$3-$2-$1T$4:$5')).getTime();
+             bVal = new Date(bVal.replace(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/, '$3-$2-$1T$4:$5')).getTime();
+             if (isNaN(aVal)) aVal = -Infinity; // Coloca datas inválidas no final
+             if (isNaN(bVal)) bVal = -Infinity;
+        } 
+        
+        // Trata colunas de Leitura/Consumo (índices 4, 5, 6) para ordenação numérica
+        else if (colIndex >= 4 && colIndex <= 6) {
+             // Remove a unidade (m³ ou kWh) e converte para float
+             aVal = parseFloat(aVal.split(' ')[0]) || 0;
+             bVal = parseFloat(bVal.split(' ')[0]) || 0;
+        }
+
+        let comparison = 0;
+        if (aVal > bVal) comparison = 1;
+        else if (aVal < bVal) comparison = -1;
+
+        return dir === 'asc' ? comparison : comparison * -1;
+    };
+
+    // Ordena as linhas
+    linhas.sort(comparador);
+
+    // Reinsere as linhas na tabela
+    linhas.forEach(row => tbody.appendChild(row));
+}
+
+// Funções para Modals e Edição Online (Implementação de base)
+
+function abrirModalEditOnline(rowId, tipo) {
+    const registro = todosRegistrosOnline.find(r => r.rowId === rowId && r.tipo === tipo);
+    if (!registro) {
+        mostrarAlerta('configAlert', 'Registro não encontrado!', 'error');
+        return;
+    }
+
+    // Preencher campos
+    document.getElementById('editOnlineRowId').value = rowId;
+    document.getElementById('editOnlineTipo').value = tipo;
+    document.getElementById('editOnlineNome').value = registro.nome;
+    document.getElementById('editOnlineMatricula').value = registro.matricula;
+    
+    // Converter a data para o formato datetime-local
+    const date = new Date(registro.dataHora);
+    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+    document.getElementById('editOnlineDataHora').value = localDate;
+    
+    const unidade = tipo === 'agua' ? 'm³' : 'kWh';
+    document.getElementById('labelEditOnlineLeituraAnterior').textContent = `Leitura Anterior (${unidade})`;
+    document.getElementById('labelEditOnlineLeituraAtual').textContent = `Leitura Atual do Medidor (${unidade}) *`;
+    document.getElementById('labelEditOnlineConsumoTotal').textContent = `Consumo Total Calculado (${unidade})`;
+
+    document.getElementById('editOnlineLeituraAnterior').value = parseFloat(registro.leituraAnterior).toFixed(2);
+    document.getElementById('editOnlineLeituraAtual').value = parseFloat(registro.leituraAtual).toFixed(2);
+    document.getElementById('editOnlineConsumoTotal').value = parseFloat(registro.consumoTotal).toFixed(2);
+    document.getElementById('editOnlineExtra1').value = registro.extra1 || '';
+    document.getElementById('editOnlineExtra2').value = registro.extra2 || '';
+    document.getElementById('editOnlineExtra3').value = registro.extra3 || '';
+
+    document.getElementById('editOnlineModal').style.display = 'block';
+    mostrarAlerta('alertEditOnlineModal', '', ''); // Limpa alertas anteriores
+}
+
+function fecharModalEditOnline() {
+    document.getElementById('editOnlineModal').style.display = 'none';
+}
+
+function calcularConsumoModalOnline() {
+    const tipo = document.getElementById('editOnlineTipo').value;
+    const leituraAtualInput = document.getElementById('editOnlineLeituraAtual');
+    const leituraAnteriorInput = document.getElementById('editOnlineLeituraAnterior');
+    const consumoTotalInput = document.getElementById('editOnlineConsumoTotal');
     
     const leituraAtual = parseFloat(leituraAtualInput.value) || 0;
-    const leituraAnterior = tipo === 'agua' ? leituraAnteriorAgua : leituraAnteriorEnergia;
+    const leituraAnterior = parseFloat(leituraAnteriorInput.value) || 0;
     
     const consumo = Math.max(0, leituraAtual - leituraAnterior);
     consumoTotalInput.value = consumo.toFixed(2);
-    
-    const display = document.getElementById(`consumptionDisplay${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
-    const valueDisplay = document.getElementById(`consumptionValue${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
-    
-    if (consumo > 0) {
-        display.style.display = 'block';
-        valueDisplay.textContent = consumo.toFixed(2) + (tipo === 'agua' ? ' m³' : ' kWh');
-    } else {
-        display.style.display = 'none';
-    }
 }
 
-async function handleSubmit(event, tipo) {
+async function salvarEdicaoOnline(event) {
     event.preventDefault();
-    
-    if (isProcessing) {
-        mostrarAlerta(`alert${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, 'Aguarde o envio anterior ser concluído!', 'error');
-        return;
-    }
-    
-    isProcessing = true;
-    const form = event.target;
-    const btn = form.querySelector('button[type="submit"]');
-    const originalHTML = btn.innerHTML;
-    
-    btn.disabled = true;
-    btn.innerHTML = '<div class="loading"></div> Enviando...';
+    if (isProcessing || !scriptURL || !sheetID) return;
 
-    const formData = new FormData(form);
-    const dataToSend = {
+    const btn = event.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span> Salvando...';
+    isProcessing = true;
+    mostrarAlerta('alertEditOnlineModal', '', '');
+
+    const rowId = document.getElementById('editOnlineRowId').value;
+    const tipo = document.getElementById('editOnlineTipo').value;
+    const form = new FormData(event.target);
+    const dados = {
+        action: 'editRecord',
+        sheetId: sheetID,
+        rowId: rowId,
         tipo: tipo,
-        nome: formData.get('nome'),
-        matricula: formData.get('matricula'),
-        dataHora: formData.get('dataHora'),
-        leituraAnterior: tipo === 'agua' ? leituraAnteriorAgua.toFixed(2) : leituraAnteriorEnergia.toFixed(2),
-        leituraAtual: parseFloat(formData.get('leituraAtual') || 0).toFixed(2),
-        consumoTotal: parseFloat(formData.get('consumoTotal') || 0).toFixed(2),
-        extra1: formData.get('extra1') || '',
-        extra2: formData.get('extra2') || '',
-        extra3: formData.get('extra3') || '',
-        timestamp: new Date().toISOString()
+        nome: form.get('nome'),
+        matricula: form.get('matricula'),
+        dataHora: form.get('dataHora'),
+        leituraAtual: form.get('leituraAtual'),
+        consumoTotal: form.get('consumoTotal'),
+        leituraAnterior: document.getElementById('editOnlineLeituraAnterior').value, // Pegar valor do readonly
+        extra1: form.get('extra1'),
+        extra2: form.get('extra2'),
+        extra3: form.get('extra3')
     };
 
-    localStorage.setItem('ultimoNome', dataToSend.nome);
-    localStorage.setItem('ultimaMatricula', dataToSend.matricula);
+    try {
+        const response = await fetch(scriptURL, {
+            method: 'POST',
+            body: new URLSearchParams(dados)
+        });
+        const data = await response.json();
 
-    let success = false;
-
-    if (scriptURL && sheetID) {
-        try {
-            const onlineFormData = new FormData();
-            onlineFormData.append('action', 'addRecord');
-            onlineFormData.append('tipo', tipo);
-            onlineFormData.append('sheetId', sheetID);
-
-            for (const key in dataToSend) {
-                if (key !== 'tipo' && key !== 'timestamp') {
-                    onlineFormData.append(key, dataToSend[key]);
-                }
-            }
-            
-            const response = await fetch(scriptURL, {
-                method: 'POST',
-                body: onlineFormData
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                mostrarAlerta(`alert${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, '✅ Registro salvo ONLINE com sucesso!', 'success');
-                success = true;
-                
-                // Tocar som de sucesso
-                playSuccessSound();
-            } else {
-                throw new Error(result.message || 'Erro ao salvar online, salvando offline...');
-            }
-        } catch (error) {
-            console.error('Falha no envio online. Salvando offline.', error);
-            salvarRegistroOffline(dataToSend);
-            mostrarAlerta(`alert${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, `⚠️ Falha no envio ONLINE. Registro salvo OFFLINE. ${error.message}`, 'warning');
+        if (data.status === 'success') {
+            mostrarAlerta('alertEditOnlineModal', 'Edição salva com sucesso! Atualizando histórico...', 'success');
+            await carregarDados(); // Recarrega todos os dados e histórico
+            fecharModalEditOnline();
+        } else {
+            mostrarAlerta('alertEditOnlineModal', 'Erro ao salvar: ' + (data.message || 'Erro desconhecido.'), 'error');
         }
-    } else {
-        salvarRegistroOffline(dataToSend);
-        mostrarAlerta(`alert${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`, '⚠️ Sistema não configurado. Registro salvo OFFLINE.', 'warning');
+    } catch (error) {
+        mostrarAlerta('alertEditOnlineModal', 'Erro de conexão: ' + error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons">save</span> Salvar Alterações';
+        isProcessing = false;
     }
-    
-    if (success) {
-        await carregarDados();
-    }
-    carregarRegistrosPendentes();
-    
-    const nome = dataToSend.nome;
-    const matricula = dataToSend.matricula;
-    form.reset();
-    form.querySelector('input[name="nome"]').value = nome;
-    form.querySelector('input[name="matricula"]').value = matricula;
-    setDataHoraAtual();
-    
-    document.getElementById(`consumptionDisplay${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).style.display = 'none';
-
-    isProcessing = false;
-    btn.disabled = false;
-    btn.innerHTML = originalHTML;
 }
 
-function playSuccessSound() {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = 800;
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
-}
-
-function getRegistrosOffline() {
-    const json = localStorage.getItem('registrosOffline');
-    return json ? JSON.parse(json) : [];
-}
-
-function setRegistrosOffline(registros) {
-    localStorage.setItem('registrosOffline', JSON.stringify(registros));
-    document.getElementById('pendingRecordsCount').textContent = registros.length;
-    carregarRegistrosPendentes();
-}
-
-function salvarRegistroOffline(registro) {
-    const registros = getRegistrosOffline();
-    registros.push(registro);
-    setRegistrosOffline(registros);
-}
-
-function carregarRegistrosPendentes() {
-    todosRegistrosOffline = getRegistrosOffline();
-    aplicarFiltrosOffline();
-    
-    const card = document.getElementById('pendingRecordsCard');
-    const badge = document.getElementById('pendingCountBadge');
-    
-    badge.textContent = todosRegistrosOffline.length;
-    card.style.display = todosRegistrosOffline.length > 0 ? 'block' : 'none';
-}
-
-function renderizarRegistrosOffline(registros) {
-    const tbody = document.getElementById('registrosPendentesBody');
-    
-    if (registros.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
-                    Nenhum registro offline encontrado com os filtros aplicados.
-                </td>
-            </tr>
-        `;
+async function deletarRegistroOnline(rowId, tipo) {
+    if (!confirm(`Tem certeza que deseja excluir o registro ${rowId} de ${tipo.toUpperCase()}? Esta ação é irreversível!`)) {
         return;
     }
+    if (isProcessing || !scriptURL || !sheetID) return;
+    isProcessing = true;
 
-    tbody.innerHTML = '';
-    registros.forEach((reg, index) => {
-        const indexOriginal = todosRegistrosOffline.indexOf(reg);
-        const row = tbody.insertRow();
-        row.classList.add('offline-row');
-        const tipo = String(reg.tipo || '').toLowerCase();
-        const unit = tipo === 'agua' ? 'm³' : 'kWh';
-
-        let dataFormatada = 'Data Inválida';
-        if (reg.dataHora) {
-            try {
-                const d = new Date(reg.dataHora);
-                if (!isNaN(d.getTime())) {
-                    dataFormatada = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                }
-            } catch (e) {
-                console.error('Erro ao formatar data:', e);
-            }
-        }
+    try {
+        mostrarAlerta('configAlert', 'Excluindo registro...', 'warning');
         
-        row.innerHTML = `
-            <td><span class="badge badge-offline">${tipo === 'agua' ? '💧 Água' : '⚡ Energia'}</span></td>
-            <td>${dataFormatada}</td>
-            <td>${String(reg.nome || 'N/A')}</td>
-            <td>${String(reg.matricula || 'N/A')}</td>
-            <td style="text-align: right; font-weight: 600;">${parseFloat(reg.leituraAtual || 0).toFixed(2)} ${unit}</td>
-            <td style="text-align: right; color: var(--success); font-weight: 600;">+${parseFloat(reg.consumoTotal || 0).toFixed(2)} ${unit}</td>
-            <td>
-                <button class="btn btn-edit" onclick="abrirModalEdicao(${indexOriginal})">
-                    <span class="material-icons" style="font-size: 14px;">edit</span>
-                    Editar
-                </button>
-                <button class="btn btn-danger" onclick="excluirRegistroOffline(${indexOriginal})">
-                    <span class="material-icons" style="font-size: 14px;">delete</span>
-                    Excluir
-                </button>
-            </td>
-        `;
-    });
+        const dados = {
+            action: 'deleteRecord',
+            sheetId: sheetID,
+            rowId: rowId,
+            tipo: tipo
+        };
+
+        const response = await fetch(scriptURL, {
+            method: 'POST',
+            body: new URLSearchParams(dados)
+        });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            mostrarAlerta('configAlert', 'Registro excluído com sucesso! Recarregando histórico...', 'success');
+            await carregarDados(); 
+        } else {
+            mostrarAlerta('configAlert', 'Erro ao excluir: ' + (data.message || 'Erro desconhecido.'), 'error');
+        }
+    } catch (error) {
+        mostrarAlerta('configAlert', 'Erro de conexão: ' + error.message, 'error');
+    } finally {
+        isProcessing = false;
+    }
 }
 
-function toggleCustomDateOffline() {
-    const periodo = document.getElementById('filtroPeriodoOffline').value;
-    const showCustom = periodo === 'custom';
+
+// --- Funções Auxiliares (Completações de Lógica) ---
+
+function mostrarAlerta(id, mensagem, tipo) {
+    const alertElement = document.getElementById(id);
+    if (!alertElement) return;
+
+    alertElement.className = 'alert';
+    alertElement.textContent = '';
+
+    if (mensagem && tipo) {
+        alertElement.classList.add('show', `alert-${tipo}`);
+        alertElement.innerHTML = `<span class="material-icons">${tipo === 'success' ? 'check_circle' : (tipo === 'error' ? 'cancel' : 'warning')}</span> ${mensagem}`;
+    }
+}
+
+function calcularConsumo(tipo) {
+    const leituraAtualInput = document.getElementById(`leituraAtual${tipo === 'agua' ? 'Agua' : 'Energia'}`);
+    const leituraAnteriorInput = document.getElementById(`leituraAnterior${tipo === 'agua' ? 'Agua' : 'Energia'}`);
+    const consumoTotalInput = document.getElementById(`consumoTotal${tipo === 'agua' ? 'Agua' : 'Energia'}`);
+    const consumptionValueDiv = document.getElementById(`consumptionValue${tipo === 'agua' ? 'Agua' : 'Energia'}`);
+    const consumptionDisplay = document.getElementById(`consumptionDisplay${tipo === 'agua' ? 'Agua' : 'Energia'}`);
+
+    const leituraAtual = parseFloat(leituraAtualInput.value) || 0;
+    const leituraAnterior = parseFloat(leituraAnteriorInput.value) || 0;
     
-    document.getElementById('dataInicioGroupOffline').style.display = showCustom ? 'block' : 'none';
-    document.getElementById('dataFimGroupOffline').style.display = showCustom ? 'block' : 'none';
+    const consumo = Math.max(0, leituraAtual - leituraAnterior);
+    consumoTotalInput.value = consumo.toFixed(2);
+    consumptionValueDiv.textContent = consumo.toFixed(2) + (tipo === 'agua' ? ' m³' : ' kWh');
+
+    if (consumo > 0) {
+        consumptionDisplay.style.display = 'block';
+    } else {
+        consumptionDisplay.style.display = 'none';
+    }
+
+    // Chama a função de cálculo de custo para atualizar em tempo real a estimativa
+    calcularCustoEstimado(); 
+}
+
+// Funções de Offline e Submissão (Necessitam de lógica de Apps Script/Sheet ID para funcionar plenamente)
+
+function carregarRegistrosPendentes() {
+    // Lógica para carregar do localStorage 'offlineRecords' e popular a tabela de pendentes
+    const offlineRecords = JSON.parse(localStorage.getItem('offlineRecords') || '[]');
+    todosRegistrosOffline = offlineRecords;
+    document.getElementById('pendingRecordsCount').textContent = offlineRecords.length.toString();
+    
+    const pendingCard = document.getElementById('pendingRecordsCard');
+    if (offlineRecords.length > 0) {
+        pendingCard.style.display = 'block';
+    } else {
+        pendingCard.style.display = 'none';
+    }
+    aplicarFiltrosOffline();
 }
 
 function aplicarFiltrosOffline() {
-    const tipoFiltro = document.getElementById('filtroTipoOffline').value;
-    const periodoFiltro = document.getElementById('filtroPeriodoOffline').value;
-    
-    let registrosFiltrados = [...todosRegistrosOffline];
-    
-    if (tipoFiltro !== 'all') {
-        registrosFiltrados = registrosFiltrados.filter(r => String(r.tipo).toLowerCase() === tipoFiltro);
+    // Implementação básica de filtragem offline
+    let registros = todosRegistrosOffline;
+    const tipo = document.getElementById('filtroTipoOffline').value;
+
+    if (tipo !== 'all') {
+        registros = registros.filter(r => r.tipo === tipo);
     }
     
-    if (periodoFiltro === 'today') {
-        const hoje = new Date().toISOString().split('T')[0];
-        registrosFiltrados = registrosFiltrados.filter(r => {
-            if (!r.dataHora) return false;
-            const dataReg = new Date(r.dataHora).toISOString().split('T')[0];
-            return dataReg === hoje;
-        });
-    } else if (periodoFiltro === 'custom') {
-        const dataInicio = document.getElementById('dataInicioOffline').value;
-        const dataFim = document.getElementById('dataFimOffline').value;
-        
-        if (dataInicio && dataFim) {
-            registrosFiltrados = registrosFiltrados.filter(r => {
-                if (!r.dataHora) return false;
-                const dataReg = new Date(r.dataHora).toISOString().split('T')[0];
-                return dataReg >= dataInicio && dataReg <= dataFim;
-            });
-        }
-    }
-    
-    renderizarRegistrosOffline(registrosFiltrados);
-}
-
-function limparFiltrosOffline() {
-    document.getElementById('filtroTipoOffline').value = 'all';
-    document.getElementById('filtroPeriodoOffline').value = 'all';
-    document.getElementById('dataInicioOffline').value = '';
-    document.getElementById('dataFimOffline').value = '';
-    toggleCustomDateOffline();
-    aplicarFiltrosOffline();
-}
-
-function excluirRegistroOffline(index) {
-    if (!confirm('Tem certeza de que deseja excluir este registro offline? Esta ação não pode ser desfeita.')) {
-        return;
-    }
-    const registros = getRegistrosOffline();
-    registros.splice(index, 1);
-    setRegistrosOffline(registros);
-    mostrarAlerta('syncAlert', 'Registro excluído com sucesso!', 'success');
-}
-
-function limparTodosRegistrosOffline() {
-    const registros = getRegistrosOffline();
-    
+    // Renderizar na tabela de pendentes
+    const tbody = document.getElementById('registrosPendentesBody');
     if (registros.length === 0) {
-        mostrarAlerta('syncAlert', 'Não há registros offline para limpar.', 'warning');
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">Nenhum registro offline encontrado com os filtros.</td></tr>`;
         return;
     }
     
-    if (!confirm(`⚠️ ATENÇÃO: Você tem CERTEZA ABSOLUTA de que deseja EXCLUIR TODOS os ${registros.length} registros pendentes offline?\n\n❌ Esta ação é IRREVERSÍVEL e os dados serão PERDIDOS PERMANENTEMENTE!\n\n✅ Clique em OK para confirmar a exclusão\n❌ Clique em Cancelar para manter os registros`)) {
-        return;
-    }
-    
-    if (!confirm(`🚨 ÚLTIMA CONFIRMAÇÃO!\n\nVocê está prestes a excluir ${registros.length} registro(s) offline.\n\nTem certeza de que deseja continuar?`)) {
-        return;
-    }
-    
-    setRegistrosOffline([]);
-    mostrarAlerta('syncAlert', `✅ Todos os ${registros.length} registros offline foram excluídos com sucesso.`, 'warning');
+    let html = '';
+    registros.forEach((reg, index) => {
+        const badgeClass = reg.tipo === 'agua' ? 'badge-agua' : 'badge-energia';
+        const unidade = reg.tipo === 'agua' ? 'm³' : 'kWh';
+        html += `
+            <tr class="offline-row">
+                <td><span class="badge ${badgeClass}">${reg.tipo.toUpperCase()}</span></td>
+                <td>${new Date(reg.dataHora).toLocaleDateString('pt-BR')} ${new Date(reg.dataHora).toLocaleTimeString('pt-BR').substring(0, 5)}</td>
+                <td>${reg.nome}</td>
+                <td>${reg.matricula}</td>
+                <td style="text-align: right;">${parseFloat(reg.leituraAtual).toFixed(2)} ${unidade}</td>
+                <td style="text-align: right;">${parseFloat(reg.consumoTotal).toFixed(2)} ${unidade}</td>
+                <td>
+                    <button class="btn btn-edit" onclick="abrirModalEdicaoOffline(${index})" title="Editar Offline">
+                        <span class="material-icons" style="font-size: 16px;">edit</span>
+                    </button>
+                    <button class="btn btn-danger" onclick="deletarRegistroOffline(${index})" title="Excluir Offline">
+                        <span class="material-icons" style="font-size: 16px;">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
 }
 
-async function sincronizarRegistrosPendentes() {
-    if (isProcessing) {
-        mostrarAlerta('syncAlert', 'Aguarde a sincronização anterior ser concluída!', 'error');
-        return;
-    }
-
-    if (!scriptURL || !sheetID) {
-        mostrarAlerta('syncAlert', 'Configure o sistema (URL e ID) primeiro!', 'error');
-        return;
-    }
-
-    const registros = getRegistrosOffline();
-    if (registros.length === 0) {
-        mostrarAlerta('syncAlert', 'Não há registros pendentes para sincronizar!', 'warning');
-        return;
-    }
-
-    isProcessing = true;
-    const btn = document.querySelector('.btn-warning');
-    const originalHTML = btn.innerHTML;
-    
-    btn.disabled = true;
-    btn.innerHTML = '<div class="loading"></div> Sincronizando...';
-
-    const payload = registros.map(reg => ({
-        tipo: reg.tipo,
-        nome: reg.nome,
-        matricula: reg.matricula,
-        dataHora: reg.dataHora,
-        leituraAnterior: reg.leituraAnterior,
-        leituraAtual: reg.leituraAtual,
-        consumoTotal: reg.consumoTotal,
-        extra1: reg.extra1,
-        extra2: reg.extra2,
-        extra3: reg.extra3,
-    }));
-
-    try {
-        const response = await fetch(`${scriptURL}?action=addBatchRecords&sheetId=${sheetID}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ records: payload })
-        });
-
-        const result = await response.json();
-
-        if (result.status === 'success') {
-            setRegistrosOffline([]);
-            mostrarAlerta('syncAlert', `✅ ${result.count || registros.length} registros sincronizados com sucesso!`, 'success');
-            await carregarDados();
-        } else {
-            throw new Error(result.message || 'Erro desconhecido ao sincronizar em lote.');
-        }
-
-    } catch (error) {
-        mostrarAlerta('syncAlert', '❌ Erro na sincronização: ' + error.message, 'error');
-        console.error('Erro de sincronização:', error);
-    } finally {
-        isProcessing = false;
-        btn.disabled = false;
-        btn.innerHTML = originalHTML;
-        carregarRegistrosPendentes();
-    }
-}
-
-// MODAL EDIÇÃO OFFLINE
-function abrirModalEdicao(index) {
-    const registros = getRegistrosOffline();
-    const reg = registros[index];
-    const tipo = reg.tipo;
-    const unit = tipo === 'agua' ? 'm³' : 'kWh';
+function abrirModalEdicaoOffline(index) {
+    const reg = todosRegistrosOffline[index];
+    if (!reg) return;
 
     document.getElementById('editIndex').value = index;
-    document.getElementById('editTipo').value = tipo;
-    
-    document.getElementById('labelLeituraAnterior').textContent = `Leitura Anterior (${unit})`;
-    document.getElementById('labelLeituraAtual').textContent = `Leitura Atual do Medidor (${unit}) *`;
-    document.getElementById('labelConsumoTotal').textContent = `Consumo Total Calculado (${unit})`;
-
+    document.getElementById('editTipo').value = reg.tipo;
     document.getElementById('editNome').value = reg.nome;
     document.getElementById('editMatricula').value = reg.matricula;
-    document.getElementById('editDataHora').value = reg.dataHora.slice(0, 16);
-    document.getElementById('editLeituraAnterior').value = reg.leituraAnterior;
-    document.getElementById('editLeituraAtual').value = reg.leituraAtual;
-    document.getElementById('editConsumoTotal').value = reg.consumoTotal;
-    document.getElementById('editExtra1').value = reg.extra1;
-    document.getElementById('editExtra2').value = reg.extra2;
-    document.getElementById('editExtra3').value = reg.extra3;
     
+    const date = new Date(reg.dataHora);
+    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+    document.getElementById('editDataHora').value = localDate;
+
+    const unidade = reg.tipo === 'agua' ? 'm³' : 'kWh';
+    document.getElementById('labelLeituraAnterior').textContent = `Leitura Anterior (${unidade})`;
+    document.getElementById('labelLeituraAtual').textContent = `Leitura Atual do Medidor (${unidade}) *`;
+    document.getElementById('labelConsumoTotal').textContent = `Consumo Total Calculado (${unidade})`;
+
+    document.getElementById('editLeituraAnterior').value = parseFloat(reg.leituraAnterior).toFixed(2);
+    document.getElementById('editLeituraAtual').value = parseFloat(reg.leituraAtual).toFixed(2);
+    document.getElementById('editConsumoTotal').value = parseFloat(reg.consumoTotal).toFixed(2);
+    document.getElementById('editExtra1').value = reg.extra1 || '';
+    document.getElementById('editExtra2').value = reg.extra2 || '';
+    document.getElementById('editExtra3').value = reg.extra3 || '';
+
     document.getElementById('editModal').style.display = 'block';
+    mostrarAlerta('alertEditModal', '', ''); 
+}
+
+function fecharModal() {
+    document.getElementById('editModal').style.display = 'none';
 }
 
 function calcularConsumoModal() {
-    const leituraAtual = parseFloat(document.getElementById('editLeituraAtual').value) || 0;
-    const leituraAnterior = parseFloat(document.getElementById('editLeituraAnterior').value) || 0;
+    const tipo = document.getElementById('editTipo').value;
+    const leituraAtualInput = document.getElementById('editLeituraAtual');
+    const leituraAnteriorInput = document.getElementById('editLeituraAnterior');
+    const consumoTotalInput = document.getElementById('editConsumoTotal');
+    
+    const leituraAtual = parseFloat(leituraAtualInput.value) || 0;
+    const leituraAnterior = parseFloat(leituraAnteriorInput.value) || 0;
     
     const consumo = Math.max(0, leituraAtual - leituraAnterior);
-    document.getElementById('editConsumoTotal').value = consumo.toFixed(2);
+    consumoTotalInput.value = consumo.toFixed(2);
 }
 
 function salvarEdicao(event) {
     event.preventDefault();
 
-    const index = parseInt(document.getElementById('editIndex').value);
-    const tipo = document.getElementById('editTipo').value;
-    const registros = getRegistrosOffline();
-    
-    calcularConsumoModal();
+    const index = parseInt(document.getElementById('editIndex').value, 10);
+    const form = new FormData(event.target);
+    const btn = event.target.querySelector('button[type="submit"]');
 
-    const registroEditado = {
-        tipo: tipo,
-        nome: document.getElementById('editNome').value,
-        matricula: document.getElementById('editMatricula').value,
-        dataHora: document.getElementById('editDataHora').value,
-        leituraAnterior: parseFloat(document.getElementById('editLeituraAnterior').value).toFixed(2),
-        leituraAtual: parseFloat(document.getElementById('editLeituraAtual').value).toFixed(2),
-        consumoTotal: parseFloat(document.getElementById('editConsumoTotal').value).toFixed(2),
-        extra1: document.getElementById('editExtra1').value,
-        extra2: document.getElementById('editExtra2').value,
-        extra3: document.getElementById('editExtra3').value,
-        timestamp: registros[index].timestamp
-    };
-
-    registros[index] = registroEditado;
-    setRegistrosOffline(registros);
-    mostrarAlerta('alertEditModal', 'Registro atualizado com sucesso no modo offline!', 'success');
-    
-    setTimeout(() => {
-        fecharModal();
-    }, 1500);
+    if (index >= 0 && index < todosRegistrosOffline.length) {
+        todosRegistrosOffline[index] = {
+            ...todosRegistrosOffline[index],
+            nome: form.get('nome'),
+            matricula: form.get('matricula'),
+            dataHora: form.get('dataHora'),
+            leituraAnterior: document.getElementById('editLeituraAnterior').value,
+            leituraAtual: form.get('leituraAtual'),
+            consumoTotal: form.get('consumoTotal'),
+            extra1: form.get('extra1'),
+            extra2: form.get('extra2'),
+            extra3: form.get('extra3')
+        };
+        localStorage.setItem('offlineRecords', JSON.stringify(todosRegistrosOffline));
+        
+        mostrarAlerta('alertEditModal', 'Edição salva no modo offline!', 'success');
+        btn.innerHTML = '<span class="material-icons">save</span> Salvo!';
+        setTimeout(() => {
+            fecharModal();
+            carregarRegistrosPendentes();
+            btn.innerHTML = '<span class="material-icons">save</span> Salvar Edição';
+        }, 1000);
+    } else {
+        mostrarAlerta('alertEditModal', 'Erro ao encontrar o registro.', 'error');
+    }
 }
 
-function fecharModal() {
-    document.getElementById('editModal').style.display = 'none';
-    document.getElementById('alertEditModal').classList.remove('show');
+function deletarRegistroOffline(index) {
+    if (confirm("Tem certeza que deseja remover este registro offline?")) {
+        todosRegistrosOffline.splice(index, 1);
+        localStorage.setItem('offlineRecords', JSON.stringify(todosRegistrosOffline));
+        carregarRegistrosPendentes();
+    }
 }
 
-// MODAL EDIÇÃO ONLINE
-function abrirModalEditOnline(index) {
-    const registrosFiltrados = obterRegistrosFiltrados();
-    const reg = registrosFiltrados[index];
-    const tipo = reg.tipo;
-    const unit = tipo === 'agua' ? 'm³' : 'kWh';
+async function sincronizarRegistrosPendentes() {
+    if (!scriptURL || !sheetID || todosRegistrosOffline.length === 0) {
+        mostrarAlerta('syncAlert', 'Nenhum registro para sincronizar ou configuração ausente.', 'warning');
+        return;
+    }
+    
+    if (isProcessing) return;
+    isProcessing = true;
+    mostrarAlerta('syncAlert', `Sincronizando ${todosRegistrosOffline.length} registro(s)...`, 'warning');
 
-    document.getElementById('editOnlineRowId').value = index;
-    document.getElementById('editOnlineTipo').value = tipo;
+    const registrosParaEnviar = todosRegistrosOffline;
+    let sucesso = 0;
+    let falha = 0;
     
-    document.getElementById('labelEditOnlineLeituraAnterior').textContent = `Leitura Anterior (${unit})`;
-    document.getElementById('labelEditOnlineLeituraAtual').textContent = `Leitura Atual do Medidor (${unit}) *`;
-    document.getElementById('labelEditOnlineConsumoTotal').textContent = `Consumo Total Calculado (${unit})`;
+    for (const reg of registrosParaEnviar) {
+        try {
+            const dados = {
+                action: 'addRecord',
+                sheetId: sheetID,
+                tipo: reg.tipo,
+                nome: reg.nome,
+                matricula: reg.matricula,
+                dataHora: reg.dataHora,
+                leituraAtual: reg.leituraAtual,
+                leituraAnterior: reg.leituraAnterior,
+                consumoTotal: reg.consumoTotal,
+                extra1: reg.extra1,
+                extra2: reg.extra2,
+                extra3: reg.extra3
+            };
+            
+            const response = await fetch(scriptURL, {
+                method: 'POST',
+                body: new URLSearchParams(dados)
+            });
+            const data = await response.json();
 
-    document.getElementById('editOnlineNome').value = reg.nome;
-    document.getElementById('editOnlineMatricula').value = reg.matricula;
+            if (data.status === 'success') {
+                sucesso++;
+                todosRegistrosOffline = todosRegistrosOffline.filter(r => r !== reg); // Remove o registro enviado com sucesso
+            } else {
+                falha++;
+                console.error('Falha ao enviar registro:', reg, data.message);
+            }
+        } catch (error) {
+            falha++;
+            console.error('Erro de rede ao enviar registro:', reg, error);
+        }
+    }
+
+    localStorage.setItem('offlineRecords', JSON.stringify(todosRegistrosOffline));
     
-    const dataHora = new Date(reg.dataHora);
-    const localDate = new Date(dataHora.getTime() - dataHora.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    document.getElementById('editOnlineDataHora').value = localDate;
+    if (falha === 0) {
+        mostrarAlerta('syncAlert', `✅ Sincronização completa! ${sucesso} registro(s) enviados.`, 'success');
+    } else {
+        mostrarAlerta('syncAlert', `⚠️ Sincronização parcial. ${sucesso} enviados, ${falha} falharam.`, 'error');
+    }
     
-    document.getElementById('editOnlineLeituraAnterior').value = parseFloat(reg.leituraAnterior || 0).toFixed(2);
-    document.getElementById('editOnlineLeituraAtual').value = parseFloat(reg.leituraAtual || 0).toFixed(2);
-    document.getElementById('editOnlineConsumoTotal').value = parseFloat(reg.consumoTotal || 0).toFixed(2);
-    document.getElementById('editOnlineExtra1').value = reg.extra1 || '';
-    document.getElementById('editOnlineExtra2').value = reg.extra2 || '';
-    document.getElementById('editOnlineExtra3').value = reg.extra3 || '';
-    
-    document.getElementById('editOnlineModal').style.display = 'block';
+    isProcessing = false;
+    carregarRegistrosPendentes();
+    await carregarDados(); // Recarrega o histórico online e estatísticas
 }
 
-function calcularConsumoModalOnline() {
-    const leituraAtual = parseFloat(document.getElementById('editOnlineLeituraAtual').value) || 0;
-    const leituraAnterior = parseFloat(document.getElementById('editOnlineLeituraAnterior').value) || 0;
-    
-    const consumo = Math.max(0, leituraAtual - leituraAnterior);
-    document.getElementById('editOnlineConsumoTotal').value = consumo.toFixed(2);
+function limparTodosRegistrosOffline() {
+    if (confirm("ATENÇÃO: Você tem certeza que deseja APAGAR TODOS os registros offline? Esta ação é irreversível e pode causar perda de dados não sincronizados!")) {
+        localStorage.removeItem('offlineRecords');
+        carregarRegistrosPendentes();
+        mostrarAlerta('syncAlert', 'Todos os registros offline foram removidos.', 'success');
+    }
 }
 
-async function salvarEdicaoOnline(event) {
+async function handleSubmit(event, tipo) {
     event.preventDefault();
+    if (isProcessing) return;
 
-    if (!scriptURL || !sheetID) {
-        mostrarAlerta('alertEditOnlineModal', 'Configure o sistema primeiro!', 'error');
+    const form = document.getElementById(`${tipo}Form`);
+    const btn = form.querySelector('button[type="submit"]');
+    const alertId = `alert${tipo === 'agua' ? 'Agua' : 'Energia'}`;
+
+    if (!form.checkValidity()) {
+        form.reportValidity();
         return;
     }
 
-    const index = parseInt(document.getElementById('editOnlineRowId').value);
-    const registrosFiltrados = obterRegistrosFiltrados();
-    const regOriginal = registrosFiltrados[index];
-    const tipo = document.getElementById('editOnlineTipo').value;
-    
-    calcularConsumoModalOnline();
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span> Processando...';
+    isProcessing = true;
+    mostrarAlerta(alertId, '', '');
 
-    const dadosAtualizados = {
-        action: 'updateRecord',
+    const dados = {
+        action: 'addRecord',
         sheetId: sheetID,
         tipo: tipo,
-        rowIndex: todosRegistrosOnline.indexOf(regOriginal) + 2, // +2 porque a planilha começa em 1 e tem cabeçalho
-        nome: document.getElementById('editOnlineNome').value,
-        matricula: document.getElementById('editOnlineMatricula').value,
-        dataHora: document.getElementById('editOnlineDataHora').value,
-        leituraAnterior: parseFloat(document.getElementById('editOnlineLeituraAnterior').value).toFixed(2),
-        leituraAtual: parseFloat(document.getElementById('editOnlineLeituraAtual').value).toFixed(2),
-        consumoTotal: parseFloat(document.getElementById('editOnlineConsumoTotal').value).toFixed(2),
-        extra1: document.getElementById('editOnlineExtra1').value,
-        extra2: document.getElementById('editOnlineExtra2').value,
-        extra3: document.getElementById('editOnlineExtra3').value
+        nome: document.getElementById(`nome${tipo === 'agua' ? 'Agua' : 'Energia'}`).value,
+        matricula: document.getElementById(`matricula${tipo === 'agua' ? 'Agua' : 'Energia'}`).value,
+        dataHora: document.getElementById(`dataHora${tipo === 'agua' ? 'Agua' : 'Energia'}`).value,
+        leituraAtual: document.getElementById(`leituraAtual${tipo === 'agua' ? 'Agua' : 'Energia'}`).value,
+        leituraAnterior: document.getElementById(`leituraAnterior${tipo === 'agua' ? 'Agua' : 'Energia'}`).value,
+        consumoTotal: document.getElementById(`consumoTotal${tipo === 'agua' ? 'Agua' : 'Energia'}`).value,
+        extra1: form.elements['extra1'].value,
+        extra2: form.elements['extra2'].value,
+        extra3: form.elements['extra3'].value
     };
 
-    try {
-        const formData = new FormData();
-        for (const key in dadosAtualizados) {
-            formData.append(key, dadosAtualizados[key]);
-        }
-
-        const response = await fetch(scriptURL, {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-
-        if (result.status === 'success') {
-            mostrarAlerta('alertEditOnlineModal', '✅ Registro atualizado com sucesso!', 'success');
-            setTimeout(async () => {
-                fecharModalEditOnline();
-                await carregarDados();
-            }, 1500);
-        } else {
-            throw new Error(result.message || 'Erro ao atualizar registro');
-        }
-    } catch (error) {
-        mostrarAlerta('alertEditOnlineModal', '❌ Erro ao salvar: ' + error.message, 'error');
-        console.error('Erro:', error);
-    }
-}
-
-function fecharModalEditOnline() {
-    document.getElementById('editOnlineModal').style.display = 'none';
-    document.getElementById('alertEditOnlineModal').classList.remove('show');
-}
-
-async function excluirRegistroOnline(index) {
-    if (!confirm('⚠️ Tem certeza de que deseja EXCLUIR este registro online?\n\nEsta ação é IRREVERSÍVEL!')) {
-        return;
-    }
+    localStorage.setItem('ultimoNome', dados.nome);
+    localStorage.setItem('ultimaMatricula', dados.matricula);
 
     if (!scriptURL || !sheetID) {
-        mostrarAlerta('configAlert', 'Configure o sistema primeiro!', 'error');
+        // Modo Offline
+        salvarRegistroOffline(dados, btn, alertId);
         return;
     }
 
-    const registrosFiltrados = obterRegistrosFiltrados();
-    const reg = registrosFiltrados[index];
-    const tipo = reg.tipo;
-
+    // Modo Online
     try {
-        const formData = new FormData();
-        formData.append('action', 'deleteRecord');
-        formData.append('sheetId', sheetID);
-        formData.append('tipo', tipo);
-        formData.append('rowIndex', todosRegistrosOnline.indexOf(reg) + 2); // +2 porque a planilha começa em 1 e tem cabeçalho
-
         const response = await fetch(scriptURL, {
             method: 'POST',
-            body: formData
+            body: new URLSearchParams(dados)
         });
+        const data = await response.json();
 
-        const result = await response.json();
-
-        if (result.status === 'success') {
-            mostrarAlerta('configAlert', '✅ Registro excluído com sucesso!', 'success');
-            await carregarDados();
+        if (data.status === 'success') {
+            mostrarAlerta(alertId, `✅ Registro de ${tipo} enviado com sucesso!`, 'success');
+            form.reset();
+            setDataHoraAtual();
+            await carregarDados(); // Recarrega dados após sucesso
         } else {
-            throw new Error(result.message || 'Erro ao excluir registro');
+            throw new Error(data.message || 'Erro desconhecido');
         }
     } catch (error) {
-        mostrarAlerta('configAlert', '❌ Erro ao excluir: ' + error.message, 'error');
-        console.error('Erro:', error);
+        console.error('Erro de rede ou Apps Script:', error);
+        mostrarAlerta(alertId, `⚠️ Erro de rede. Salvando offline. ${error.message}`, 'error');
+        salvarRegistroOffline(dados, btn, alertId);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span class="material-icons">send</span> Registrar Consumo de ${tipo === 'agua' ? 'Água' : 'Energia'}`;
+        isProcessing = false;
     }
 }
 
-function obterRegistrosFiltrados() {
-    const termo = document.getElementById('searchInput').value.toLowerCase();
-    const tipoFiltro = document.getElementById('filtroTipo').value;
-    const periodoFiltro = document.getElementById('filtroPeriodo').value;
+function salvarRegistroOffline(dados, btn, alertId) {
+    const offlineRecords = JSON.parse(localStorage.getItem('offlineRecords') || '[]');
+    offlineRecords.push(dados);
+    localStorage.setItem('offlineRecords', JSON.stringify(offlineRecords));
     
-    let registrosFiltrados = [...todosRegistrosOnline];
+    mostrarAlerta(alertId, `💾 Registro salvo localmente (Offline). Sincronize quando houver conexão.`, 'warning');
     
-    if (termo) {
-        registrosFiltrados = registrosFiltrados.filter(r => 
-            (r.nome && r.nome.toLowerCase().includes(termo)) ||
-            (r.matricula && r.matricula.toLowerCase().includes(termo))
-        );
-    }
+    btn.disabled = false;
+    btn.innerHTML = `<span class="material-icons">send</span> Registrar Consumo de ${dados.tipo === 'agua' ? 'Água' : 'Energia'}`;
+    isProcessing = false;
     
-    if (tipoFiltro !== 'all') {
-        registrosFiltrados = registrosFiltrados.filter(r => String(r.tipo).toLowerCase() === tipoFiltro);
-    }
-    
-    if (periodoFiltro === 'today') {
-        const hoje = new Date().toISOString().split('T')[0];
-        registrosFiltrados = registrosFiltrados.filter(r => {
-            if (!r.dataHora) return false;
-            const dataReg = new Date(r.dataHora).toISOString().split('T')[0];
-            return dataReg === hoje;
-        });
-    } else if (periodoFiltro === 'custom') {
-        const dataInicio = document.getElementById('dataInicio').value;
-        const dataFim = document.getElementById('dataFim').value;
-        
-        if (dataInicio && dataFim) {
-            registrosFiltrados = registrosFiltrados.filter(r => {
-                if (!r.dataHora) return false;
-                const dataReg = new Date(r.dataHora).toISOString().split('T')[0];
-                return dataReg >= dataInicio && dataReg <= dataFim;
-            });
-        }
-    }
-    
-    return registrosFiltrados;
+    document.getElementById(`${dados.tipo}Form`).reset();
+    setDataHoraAtual();
+    carregarRegistrosPendentes();
 }
 
-// GRÁFICOS
+// Funções de Gráfico (Implementação de base)
+
 function trocarGrafico(tipo) {
     currentChartType = tipo;
-    
     document.querySelectorAll('.chart-tab').forEach(tab => tab.classList.remove('active'));
-    event.target.classList.add('active');
-    
+    document.querySelector(`.chart-tab[onclick="trocarGrafico('${tipo}')"]`).classList.add('active');
     atualizarGrafico();
 }
 
 function atualizarGrafico() {
-    if (currentChart) {
-        currentChart.destroy();
+    if (!todosRegistrosOnline.length) {
+        document.getElementById('consumptionChart').innerHTML = '';
+        if (currentChart) currentChart.destroy();
+        return;
     }
-
+    
     const ctx = document.getElementById('consumptionChart').getContext('2d');
-    const theme = document.documentElement.getAttribute('data-theme');
-    const textColor = theme === 'dark' ? '#e0e0e0' : '#212121';
-    const gridColor = theme === 'dark' ? '#444' : '#e0e0e0';
+    if (currentChart) currentChart.destroy();
+    
+    // Agrupamento por dia (para visualização de evolução/comparação)
+    const dadosAgrupados = todosRegistrosOnline.reduce((acc, reg) => {
+        const data = toYYYYMMDD(reg.dataHora);
+        if (!acc[data]) {
+            acc[data] = { agua: 0, energia: 0 };
+        }
+        acc[data][reg.tipo] += parseFloat(reg.consumoTotal) || 0;
+        return acc;
+    }, {});
 
-    if (currentChartType === 'line') {
-        criarGraficoLinha(ctx, textColor, gridColor);
-    } else if (currentChartType === 'bar') {
-        criarGraficoBarras(ctx, textColor, gridColor);
+    const datas = Object.keys(dadosAgrupados).sort();
+    const consumoAgua = datas.map(d => dadosAgrupados[d].agua);
+    const consumoEnergia = datas.map(d => dadosAgrupados[d].energia);
+    
+    const labels = datas.map(d => new Date(d).toLocaleDateString('pt-BR').substring(0, 5));
+    
+    const colors = [
+        document.documentElement.getAttribute('data-theme') === 'dark' ? '#64b5f6' : 'rgba(30, 136, 229, 0.8)', // Primary (Água)
+        document.documentElement.getAttribute('data-theme') === 'dark' ? '#ffb74d' : 'rgba(255, 111, 0, 0.8)'  // Accent (Energia)
+    ];
+    
+    if (currentChartType === 'line' || currentChartType === 'bar') {
+        currentChart = new Chart(ctx, {
+            type: currentChartType,
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Consumo Água (m³)',
+                        data: consumoAgua,
+                        borderColor: colors[0],
+                        backgroundColor: currentChartType === 'bar' ? colors[0] : 'transparent',
+                        tension: 0.3,
+                        fill: currentChartType === 'line' ? true : false,
+                    },
+                    {
+                        label: 'Consumo Energia (kWh)',
+                        data: consumoEnergia,
+                        borderColor: colors[1],
+                        backgroundColor: currentChartType === 'bar' ? colors[1] : 'transparent',
+                        tension: 0.3,
+                        fill: currentChartType === 'line' ? true : false,
+                        yAxisID: 'y1' 
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Água (m³)', color: colors[0] },
+                        position: 'left',
+                        grid: { color: document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Energia (kWh)', color: colors[1] },
+                        position: 'right',
+                        grid: { drawOnChartArea: false }
+                    },
+                    x: {
+                        grid: { color: document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: document.documentElement.getAttribute('data-theme') === 'dark' ? 'white' : 'black' }
+                    }
+                }
+            }
+        });
     } else if (currentChartType === 'pie') {
-        criarGraficoPizza(ctx, textColor);
-    }
-}
-
-function criarGraficoLinha(ctx, textColor, gridColor) {
-    const ultimos30Dias = [];
-    const consumoAgua = [];
-    const consumoEnergia = [];
-    
-    for (let i = 29; i >= 0; i--) {
-        const data = new Date();
-        data.setDate(data.getDate() - i);
-        const dataStr = toYYYYMMDD(data);
-        ultimos30Dias.push(data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+        const totalAgua = consumoAgua.reduce((sum, val) => sum + val, 0);
+        const totalEnergia = consumoEnergia.reduce((sum, val) => sum + val, 0);
         
-        const consumo = calcularConsumoDiarioPorData(dataStr);
-        consumoAgua.push(consumo.agua);
-        consumoEnergia.push(consumo.energia);
-    }
-
-    currentChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ultimos30Dias,
-            datasets: [{
-                label: '💧 Água (m³)',
-                data: consumoAgua,
-                borderColor: '#1e88e5',
-                backgroundColor: 'rgba(30, 136, 229, 0.1)',
-                tension: 0.4,
-                fill: true
-            }, {
-                label: '⚡ Energia (kWh)',
-                data: consumoEnergia,
-                borderColor: '#ff6f00',
-                backgroundColor: 'rgba(255, 111, 0, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    labels: { color: textColor }
-                },
-                title: {
-                    display: true,
-                    text: 'Evolução do Consumo - Últimos 30 Dias',
-                    color: textColor,
-                    font: { size: 16 }
-                }
+        currentChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Consumo Total Água', 'Consumo Total Energia'],
+                datasets: [{
+                    data: [totalAgua, totalEnergia],
+                    backgroundColor: [colors[0], colors[1]],
+                    hoverOffset: 4
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: textColor },
-                    grid: { color: gridColor }
-                },
-                x: {
-                    ticks: { color: textColor },
-                    grid: { color: gridColor }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: document.documentElement.getAttribute('data-theme') === 'dark' ? 'white' : 'black' }
+                    }
                 }
             }
-        }
-    });
-}
-
-function criarGraficoBarras(ctx, textColor, gridColor) {
-    const ultimos7Dias = [];
-    const consumoAgua = [];
-    const consumoEnergia = [];
-    
-    for (let i = 6; i >= 0; i--) {
-        const data = new Date();
-        data.setDate(data.getDate() - i);
-        const dataStr = toYYYYMMDD(data);
-        ultimos7Dias.push(data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }));
-        
-        const consumo = calcularConsumoDiarioPorData(dataStr);
-        consumoAgua.push(consumo.agua);
-        consumoEnergia.push(consumo.energia);
+        });
     }
-
-    currentChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ultimos7Dias,
-            datasets: [{
-                label: '💧 Água (m³)',
-                data: consumoAgua,
-                backgroundColor: '#1e88e5'
-            }, {
-                label: '⚡ Energia (kWh)',
-                data: consumoEnergia,
-                backgroundColor: '#ff6f00'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    labels: { color: textColor }
-                },
-                title: {
-                    display: true,
-                    text: 'Comparativo Semanal',
-                    color: textColor,
-                    font: { size: 16 }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: textColor },
-                    grid: { color: gridColor }
-                },
-                x: {
-                    ticks: { color: textColor },
-                    grid: { color: gridColor }
-                }
-            }
-        }
-    });
-}
-
-function criarGraficoPizza(ctx, textColor) {
-    let totalAgua = 0;
-    let totalEnergia = 0;
-    
-    todosRegistrosOnline.forEach(reg => {
-        const consumo = parseFloat(reg.consumoTotal || 0);
-        if (reg.tipo === 'agua') {
-            totalAgua += consumo;
-        } else {
-            totalEnergia += consumo;
-        }
-    });
-
-    currentChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ['💧 Água', '⚡ Energia'],
-            datasets: [{
-                data: [totalAgua, totalEnergia],
-                backgroundColor: ['#1e88e5', '#ff6f00']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    labels: { color: textColor }
-                },
-                title: {
-                    display: true,
-                    text: 'Distribuição Total do Consumo',
-                    color: textColor,
-                    font: { size: 16 }
-                }
-            }
-        }
-    });
 }
 
 function exportarGrafico() {
+    if (!currentChart) {
+        mostrarAlerta('configAlert', 'Nenhum gráfico para exportar!', 'error');
+        return;
+    }
     const canvas = document.getElementById('consumptionChart');
-    const url = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = `grafico-consumo-${new Date().toISOString().split('T')[0]}.png`;
-    link.href = url;
-    link.click();
+    const image = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = image;
+    a.download = `relatorio_consumo_${currentChartType}_${new Date().toISOString().split('T')[0]}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
-// RELATÓRIOS
+
+// Funções de Relatório/Exportação (Implementação de base)
+
 function atualizarRelatorio() {
     const periodo = document.getElementById('relatorioPeriodo').value;
+    let registrosFiltrados = todosRegistrosOnline;
+
+    if (periodo !== 'all') {
+        const dias = parseInt(periodo, 10);
+        const dataLimite = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+        registrosFiltrados = todosRegistrosOnline.filter(r => new Date(r.dataHora) >= dataLimite);
+    }
+
+    // Calcula Consumo Total no Período
+    let totalConsumoAgua = 0;
+    let totalConsumoEnergia = 0;
+
+    // Agrupa por tipo e encontra a maior e menor leitura no período
+    const leiturasAgua = registrosFiltrados.filter(r => r.tipo === 'agua').map(r => parseFloat(r.leituraAtual)).filter(l => !isNaN(l));
+    const leiturasEnergia = registrosFiltrados.filter(r => r.tipo === 'energia').map(r => parseFloat(r.leituraAtual)).filter(l => !isNaN(l));
     
-    const { totalAgua, totalEnergia, dias } = calcularConsumoPorPeriodo(periodo);
+    // Se não houver registros, use 0
+    if (leiturasAgua.length > 0) {
+        const minAgua = Math.min(...leiturasAgua);
+        const maxAgua = Math.max(...leiturasAgua);
+        totalConsumoAgua = maxAgua - minAgua;
+    }
+
+    if (leiturasEnergia.length > 0) {
+        const minEnergia = Math.min(...leiturasEnergia);
+        const maxEnergia = Math.max(...leiturasEnergia);
+        totalConsumoEnergia = maxEnergia - minEnergia;
+    }
+
+    // Calcula Média Diária
+    let diasNoPeriodo = 0;
+    if (registrosFiltrados.length > 0 && periodo !== 'all') {
+        const dataMaisAntiga = new Date(registrosFiltrados[0].dataHora);
+        const dataMaisRecente = new Date(registrosFiltrados[registrosFiltrados.length - 1].dataHora);
+        diasNoPeriodo = Math.ceil((dataMaisRecente - dataMaisAntiga) / (1000 * 60 * 60 * 24)) || 1; 
+    } else if (periodo !== 'all') {
+        diasNoPeriodo = parseInt(periodo, 10);
+    }
     
-    const mediaAgua = totalAgua / dias;
-    const mediaEnergia = totalEnergia / dias;
-    
-    document.getElementById('relatorioTotalAgua').textContent = totalAgua.toFixed(2) + ' m³';
-    document.getElementById('relatorioTotalEnergia').textContent = totalEnergia.toFixed(2) + ' kWh';
+    const mediaAgua = diasNoPeriodo > 0 ? totalConsumoAgua / diasNoPeriodo : 0;
+    const mediaEnergia = diasNoPeriodo > 0 ? totalConsumoEnergia / diasNoPeriodo : 0;
+
+    document.getElementById('relatorioTotalAgua').textContent = totalConsumoAgua.toFixed(2) + ' m³';
+    document.getElementById('relatorioTotalEnergia').textContent = totalConsumoEnergia.toFixed(2) + ' kWh';
     document.getElementById('relatorioMediaAgua').textContent = mediaAgua.toFixed(2) + ' m³/dia';
     document.getElementById('relatorioMediaEnergia').textContent = mediaEnergia.toFixed(2) + ' kWh/dia';
 }
 
-function gerarRelatorioPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text('Relatório de Consumo', 105, 15, { align: 'center' });
-    
-    doc.setFontSize(12);
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 105, 25, { align: 'center' });
-    
-    let y = 40;
-    
-    doc.setFontSize(14);
-    doc.text('Resumo Geral', 20, y);
-    y += 10;
-    
-    doc.setFontSize(11);
-    doc.text(`💧 Total Água: ${document.getElementById('relatorioTotalAgua').textContent}`, 20, y);
-    y += 7;
-    doc.text(`⚡ Total Energia: ${document.getElementById('relatorioTotalEnergia').textContent}`, 20, y);
-    y += 7;
-    doc.text(`📊 Média Diária Água: ${document.getElementById('relatorioMediaAgua').textContent}`, 20, y);
-    y += 7;
-    doc.text(`📊 Média Diária Energia: ${document.getElementById('relatorioMediaEnergia').textContent}`, 20, y);
-    y += 15;
-    
-    doc.setFontSize(14);
-    doc.text('Últimos 10 Registros', 20, y);
-    y += 10;
-    
-    const ultimos10 = todosRegistrosOnline.slice(-10);
-    
-    doc.setFontSize(9);
-    ultimos10.forEach(reg => {
-        const tipo = reg.tipo === 'agua' ? '💧 Água' : '⚡ Energia';
-        const data = new Date(reg.dataHora).toLocaleDateString('pt-BR');
-        const linha = `${tipo} | ${data} | ${reg.nome} | ${parseFloat(reg.consumoTotal || 0).toFixed(2)}`;
-        doc.text(linha, 20, y);
-        y += 6;
-        
-        if (y > 270) {
-            doc.addPage();
-            y = 20;
-        }
-    });
-    
-    doc.save(`relatorio-consumo-${new Date().toISOString().split('T')[0]}.pdf`);
-}
-
 function exportarCSV() {
-    let csv = 'Tipo,Data/Hora,Nome,Matrícula,Leitura Anterior,Leitura Atual,Consumo Total\n';
+    // Cabeçalho da tabela de histórico
+    const header = ["Tipo", "Data/Hora", "Nome", "Matrícula", "Leitura Anterior", "Leitura Atual", "Consumo", "Extra 1", "Extra 2", "Extra 3"];
     
+    let csvContent = header.join(";") + "\n";
+
     todosRegistrosOnline.forEach(reg => {
-        const tipo = reg.tipo === 'agua' ? 'Água' : 'Energia';
-        const dataHora = new Date(reg.dataHora).toLocaleString('pt-BR');
-        const linha = `${tipo},"${dataHora}","${reg.nome}","${reg.matricula}",${reg.leituraAnterior},${reg.leituraAtual},${reg.consumoTotal}\n`;
-        csv += linha;
+        const row = [
+            reg.tipo,
+            new Date(reg.dataHora).toLocaleString('pt-BR'),
+            reg.nome,
+            reg.matricula,
+            parseFloat(reg.leituraAnterior).toFixed(2),
+            parseFloat(reg.leituraAtual).toFixed(2),
+            parseFloat(reg.consumoTotal).toFixed(2),
+            reg.extra1 || '',
+            reg.extra2 || '',
+            reg.extra3 || ''
+        ].map(item => `"${item}"`).join(";"); // Envolve em aspas e usa ; como separador
+        csvContent += row + "\n";
     });
-    
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `dados-consumo-${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('href', url);
+    link.setAttribute('download', `historico_consumo_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
-window.onclick = function(event) {
-    const editModal = document.getElementById('editModal');
-    const editOnlineModal = document.getElementById('editOnlineModal');
+function gerarRelatorioPDF() {
+    // Adaptação da lógica de exportação de PDF (requer as bibliotecas jspdf e html2canvas)
+    const { jsPDF } = window.jspdf;
     
-    if (event.target === editModal) {
-        fecharModal();
+    window.scrollTo(0, 0); // Rola para o topo antes de capturar
+
+    const input = document.querySelector('.container');
+    html2canvas(input, { scale: 2 }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`relatorio_consumo_${new Date().toISOString().split('T')[0]}.pdf`);
+    });
+}
+
+// Funções de Cálculo de Custo (Implementação de base)
+
+function carregarFormulasSalvas() {
+    const formulaSalva = localStorage.getItem('formulaEscolhida') || 'simples';
+    document.querySelector(`input[name="formulaEscolhida"][value="${formulaSalva}"]`).checked = true;
+    
+    // Carregar parâmetros detalhados
+    document.getElementById('tarifaAgua').value = localStorage.getItem('tarifaAgua') || '4.50';
+    document.getElementById('taxaEsgoto').value = localStorage.getItem('taxaEsgoto') || '80';
+    document.getElementById('taxaDisponibilidadeAgua').value = localStorage.getItem('taxaDisponibilidadeAgua') || '25.00';
+    document.getElementById('pisAgua').value = localStorage.getItem('pisAgua') || '1.65';
+    document.getElementById('cofinsAgua').value = localStorage.getItem('cofinsAgua') || '7.60';
+    
+    document.getElementById('tarifaEnergia').value = localStorage.getItem('tarifaEnergia') || '0.80';
+    document.getElementById('tusd').value = localStorage.getItem('tusd') || '0.35';
+    document.getElementById('tust').value = localStorage.getItem('tust') || '0.05';
+    document.getElementById('bandeiraTarifaria').value = localStorage.getItem('bandeiraTarifaria') || '0.00';
+    document.getElementById('icmsEnergia').value = localStorage.getItem('icmsEnergia') || '18.00';
+    document.getElementById('pisEnergia').value = localStorage.getItem('pisEnergia') || '1.65';
+    document.getElementById('cofinsEnergia').value = localStorage.getItem('cofinsEnergia') || '7.60';
+    document.getElementById('cipEnergia').value = localStorage.getItem('cipEnergia') || '15.00';
+
+    if (formulaSalva === 'detalhada') {
+         document.getElementById('parametrosDetalhados').style.display = 'block';
+    } else {
+        document.getElementById('parametrosDetalhados').style.display = 'none';
     }
-    if (event.target === editOnlineModal) {
-        fecharModalEditOnline();
-    }
 }
 
-function mostrarAlerta(elementId, mensagem, tipo) {
-    const alert = document.getElementById(elementId);
-    if (!alert) return;
+function salvarFormulaEscolhida() {
+    const formula = document.querySelector('input[name="formulaEscolhida"]:checked').value;
+    localStorage.setItem('formulaEscolhida', formula);
+
+    localStorage.setItem('tarifaAgua', document.getElementById('tarifaAgua').value);
+    localStorage.setItem('taxaEsgoto', document.getElementById('taxaEsgoto').value);
+    localStorage.setItem('taxaDisponibilidadeAgua', document.getElementById('taxaDisponibilidadeAgua').value);
+    localStorage.setItem('pisAgua', document.getElementById('pisAgua').value);
+    localStorage.setItem('cofinsAgua', document.getElementById('cofinsAgua').value);
     
-    alert.className = `alert alert-${tipo} show`;
-    alert.innerHTML = `
-        <span class="material-icons">${tipo === 'success' ? 'check_circle' : (tipo === 'warning' ? 'warning' : 'error')}</span>
-        ${mensagem}
-    `;
-    
-    setTimeout(() => {
-        alert.classList.remove('show');
-    }, 8000);
+    localStorage.setItem('tarifaEnergia', document.getElementById('tarifaEnergia').value);
+    localStorage.setItem('tusd', document.getElementById('tusd').value);
+    localStorage.setItem('tust', document.getElementById('tust').value);
+    localStorage.setItem('bandeiraTarifaria', document.getElementById('bandeiraTarifaria').value);
+    localStorage.setItem('icmsEnergia', document.getElementById('icmsEnergia').value);
+    localStorage.setItem('pisEnergia', document.getElementById('pisEnergia').value);
+    localStorage.setItem('cofinsEnergia', document.getElementById('cofinsEnergia').value);
+    localStorage.setItem('cipEnergia', document.getElementById('cipEnergia').value);
+
+    mostrarAlerta('configAlert', 'Fórmulas e Parâmetros salvos com sucesso!', 'success');
 }
 
-// -------------------------------------------------------------
-// NOVO BLOCO DE FUNÇÕES DE CÁLCULO DE CUSTO
-// -------------------------------------------------------------
+function alterarTipoCalculo() {
+    const tipo = document.getElementById('tipoCalculo').value;
+    document.getElementById('seletorPeriodo').style.display = tipo === 'dias' ? 'block' : 'none';
+    document.getElementById('seletorMes').style.display = tipo === 'mes' ? 'block' : 'none';
+    calcularCustoEstimado();
+}
 
-/**
- * Agrega o consumo total de água e energia por um determinado período.
- * @param {string} periodo - 'today', '7', '30', 'all'.
- * @returns {{totalAgua: number, totalEnergia: number, dias: number}} O consumo agregado e a quantidade de dias no período.
- */
-function calcularConsumoPorPeriodo(periodo) {
-    const now = new Date();
-    let dataInicio;
+function calcularConsumoNoPeriodo(periodo) {
+    // Usa a mesma lógica do atualizarRelatorio, mas para um único período
+    let registrosFiltrados = todosRegistrosOnline;
+    let diasNoPeriodo = 0;
+    let dataInicio = null;
+    let dataFim = new Date();
     
     if (periodo === 'today') {
-        dataInicio = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    } else if (periodo === '7') {
-        dataInicio = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-    } else if (periodo === '30') {
-        dataInicio = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
-    } else { // 'all'
-        dataInicio = new Date(0); // Começa em 1970, pegando todos
+        diasNoPeriodo = 1;
+        dataInicio = new Date(dataFim.setHours(0, 0, 0, 0));
+    } else if (periodo === 'all') {
+        // Nenhuma filtragem, usa todos
+    } else {
+        const dias = parseInt(periodo, 10);
+        diasNoPeriodo = dias;
+        dataInicio = new Date(dataFim.setDate(dataFim.getDate() - dias));
     }
-    
-    const dataFim = new Date();
-    let totalAgua = 0;
-    let totalEnergia = 0;
 
-    // Filtra os registros que caem dentro do período
-    const registrosFiltrados = todosRegistrosOnline.filter(r => {
-        const dataReg = new Date(r.dataHora);
-        return dataReg >= dataInicio && dataReg <= dataFim;
-    });
+    if (dataInicio) {
+        registrosFiltrados = todosRegistrosOnline.filter(r => new Date(r.dataHora) >= dataInicio);
+    }
+
+    let totalConsumoAgua = 0;
+    let totalConsumoEnergia = 0;
     
-    // Para simplificar e manter a precisão (já que o consumo é sempre em relação à leitura anterior),
-    // vamos calcular o consumo diário para cada dia no período e somar.
-    
-    let diasDeConsumo = new Set(); // Para contar dias únicos com registro
-    
-    for (const reg of registrosFiltrados) {
-        // Usa o consumo total já calculado no registro para somar
-        const consumo = parseFloat(reg.consumoTotal || 0);
-        
-        // Adiciona a data do registro
-        diasDeConsumo.add(toYYYYMMDD(reg.dataHora));
-        
-        if (reg.tipo === 'agua') {
-            totalAgua += consumo;
-        } else if (reg.tipo === 'energia') {
-            totalEnergia += consumo;
-        }
+    const leiturasAgua = registrosFiltrados.filter(r => r.tipo === 'agua').map(r => parseFloat(r.leituraAtual)).filter(l => !isNaN(l));
+    const leiturasEnergia = registrosFiltrados.filter(r => r.tipo === 'energia').map(r => parseFloat(r.leituraAtual)).filter(l => !isNaN(l));
+
+    if (leiturasAgua.length > 0) {
+        const minAgua = Math.min(...leiturasAgua);
+        const maxAgua = Math.max(...leiturasAgua);
+        totalConsumoAgua = Math.max(0, maxAgua - minAgua);
+    }
+    if (leiturasEnergia.length > 0) {
+        const minEnergia = Math.min(...leiturasEnergia);
+        const maxEnergia = Math.max(...leiturasEnergia);
+        totalConsumoEnergia = Math.max(0, maxEnergia - minEnergia);
     }
     
-    let diasParaMedia = diasDeConsumo.size;
-    if (diasParaMedia === 0) {
-         // Se não houver registros, mas o período não for 'all', forçamos 1 dia para o cálculo diário
-        if (periodo === 'today') diasParaMedia = 1; 
-        else if (periodo === '7') diasParaMedia = 7;
-        else if (periodo === '30') diasParaMedia = 30;
-        else diasParaMedia = 1; // Para 'all', se não tiver nada, é 1
-    }
-    
-    return {
-        totalAgua: totalAgua,
-        totalEnergia: totalEnergia,
-        dias: diasParaMedia
-    };
+    return { agua: totalConsumoAgua, energia: totalConsumoEnergia, dias: diasNoPeriodo };
 }
 
-/**
- * Calcula o custo estimado com base nas tarifas inseridas e no consumo do período.
- */
 function calcularCustoEstimado() {
+    const tipoCalculo = document.getElementById('tipoCalculo').value;
+    const formula = document.querySelector('input[name="formulaEscolhida"]:checked').value;
+    let consumoAgua = 0;
+    let consumoEnergia = 0;
+    
+    if (tipoCalculo === 'dias') {
+        const periodo = document.getElementById('periodoCalculo').value;
+        const consumoPeriodo = calcularConsumoNoPeriodo(periodo);
+        consumoAgua = consumoPeriodo.agua;
+        consumoEnergia = consumoPeriodo.energia;
+    } else if (tipoCalculo === 'mes') {
+        // Lógica de cálculo de consumo por mês (mais complexo, requer agrupamento por ciclo de fatura)
+        // Por simplificação, vamos assumir o consumo do último mês fechado ou buscar no servidor.
+        // Aqui, será usado um valor fixo apenas para demonstração da lógica do custo.
+        // Em um sistema real, esta função buscaria no DB o consumo do mês escolhido.
+        consumoAgua = 15.00; // Exemplo para o mês
+        consumoEnergia = 250.00; // Exemplo para o mês
+    }
+
+    document.getElementById('custoConsumoAgua').textContent = consumoAgua.toFixed(2) + ' m³';
+    document.getElementById('custoConsumoEnergia').textContent = consumoEnergia.toFixed(2) + ' kWh';
+
+    let custoAgua = 0;
+    let custoEnergia = 0;
+    let breakdownAgua = '';
+    let breakdownEnergia = '';
+    
+    const BRL = (valor) => `R$ ${valor.toFixed(2).replace('.', ',')}`;
+
+    // --- CÁLCULO ÁGUA ---
     const tarifaAgua = parseFloat(document.getElementById('tarifaAgua').value) || 0;
+    const taxaEsgotoPct = parseFloat(document.getElementById('taxaEsgoto').value) || 0;
+    
+    if (formula === 'simples') {
+        custoAgua = consumoAgua * tarifaAgua;
+        const esgoto = custoAgua * (taxaEsgotoPct / 100);
+        custoAgua += esgoto;
+        
+        breakdownAgua = `
+            <p>Consumo (${consumoAgua.toFixed(2)} m³ @ ${BRL(tarifaAgua)}/m³): ${BRL(consumoAgua * tarifaAgua)}</p>
+            <p>Taxa de Esgoto (${taxaEsgotoPct}%): ${BRL(esgoto)}</p>
+            <p><strong>Total Estimado: ${BRL(custoAgua)}</strong></p>
+        `;
+    } else { // Detalhada
+        const baseAgua = consumoAgua * tarifaAgua;
+        const dispAgua = parseFloat(document.getElementById('taxaDisponibilidadeAgua').value) || 0;
+        const esgoto = baseAgua * (taxaEsgotoPct / 100);
+        const pisAguaPct = (parseFloat(document.getElementById('pisAgua').value) || 0) / 100;
+        const cofinsAguaPct = (parseFloat(document.getElementById('cofinsAgua').value) || 0) / 100;
+
+        let subtotal = baseAgua + dispAgua + esgoto;
+        const pis = subtotal * pisAguaPct;
+        const cofins = subtotal * cofinsAguaPct;
+        
+        custoAgua = subtotal + pis + cofins;
+
+        breakdownAgua = `
+            <p>Tarifa Base: ${BRL(baseAgua)}</p>
+            <p>Taxa de Esgoto (${taxaEsgotoPct}%): ${BRL(esgoto)}</p>
+            <p>Taxa de Disponibilidade: ${BRL(dispAgua)}</p>
+            <p>PIS (${(pisAguaPct * 100).toFixed(2)}%): ${BRL(pis)}</p>
+            <p>COFINS (${(cofinsAguaPct * 100).toFixed(2)}%): ${BRL(cofins)}</p>
+            <p><strong>Total Estimado: ${BRL(custoAgua)}</strong></p>
+        `;
+    }
+
+    // --- CÁLCULO ENERGIA ---
     const tarifaEnergia = parseFloat(document.getElementById('tarifaEnergia').value) || 0;
-    const taxaEsgotoPercent = parseFloat(document.getElementById('taxaEsgoto').value) || 0;
-    const impostoEnergiaPercent = parseFloat(document.getElementById('impostoEnergia').value) || 0;
-    const periodo = document.getElementById('periodoCalculo').value;
     
-    // 1. Obter Consumo Agregado no Período
-    const { totalAgua, totalEnergia } = calcularConsumoPorPeriodo(periodo);
-    
-    // 2. Cálculo do Custo Bruto (Água)
-    const custoBrutoAgua = totalAgua * tarifaAgua;
-    
-    // 3. Cálculo do Custo com Taxa de Esgoto (Água)
-    const taxaEsgotoValor = custoBrutoAgua * (taxaEsgotoPercent / 100);
-    const custoTotalAgua = custoBrutoAgua + taxaEsgotoValor;
-    
-    // 4. Cálculo do Custo Bruto (Energia)
-    const custoBrutoEnergia = totalEnergia * tarifaEnergia;
-    
-    // 5. Cálculo do Custo com Impostos (Energia)
-    // Nota: O cálculo de impostos como ICMS é complexo. Aqui fazemos uma simplificação
-    // onde a alíquota é aplicada sobre o custo total (consumo + tarifa).
-    // Para ser mais preciso, o cálculo real de impostos (PIS/COFINS/ICMS) seria em cascata.
-    // Usamos uma taxa fixa percentual sobre o valor bruto.
-    const impostoEnergiaValor = custoBrutoEnergia * (impostoEnergiaPercent / 100);
-    const custoTotalEnergia = custoBrutoEnergia + impostoEnergiaValor;
+    if (formula === 'simples') {
+        const icmsEnergiaPct = (parseFloat(document.getElementById('icmsEnergia').value) || 0) / 100;
+        custoEnergia = consumoEnergia * tarifaEnergia;
+        const impostos = custoEnergia * icmsEnergiaPct;
+        custoEnergia += impostos;
+        
+        breakdownEnergia = `
+            <p>Consumo (${consumoEnergia.toFixed(2)} kWh @ ${BRL(tarifaEnergia)}/kWh): ${BRL(consumoEnergia * tarifaEnergia)}</p>
+            <p>Impostos (ICMS - ${(icmsEnergiaPct * 100).toFixed(2)}%): ${BRL(impostos)}</p>
+            <p><strong>Total Estimado: ${BRL(custoEnergia)}</strong></p>
+        `;
+    } else { // Detalhada
+        const tusd = parseFloat(document.getElementById('tusd').value) || 0;
+        const tust = parseFloat(document.getElementById('tust').value) || 0;
+        const bandeira = parseFloat(document.getElementById('bandeiraTarifaria').value) || 0;
+        const cip = parseFloat(document.getElementById('cipEnergia').value) || 0;
+        const icmsEnergiaPct = (parseFloat(document.getElementById('icmsEnergia').value) || 0) / 100;
+        const pisEnergiaPct = (parseFloat(document.getElementById('pisEnergia').value) || 0) / 100;
+        const cofinsEnergiaPct = (parseFloat(document.getElementById('cofinsEnergia').value) || 0) / 100;
 
+        const tarifaFio = (tarifaEnergia + tusd + tust + bandeira) * consumoEnergia;
+        
+        // ICMS incide sobre TUSD + Tarifa + TUST
+        const baseIcms = (tarifaEnergia + tusd + tust + bandeira) * consumoEnergia;
+        const icms = baseIcms * icmsEnergiaPct;
+        
+        let subtotal = tarifaFio + icms;
+        const pis = subtotal * pisEnergiaPct;
+        const cofins = subtotal * cofinsEnergiaPct;
+        
+        custoEnergia = subtotal + pis + cofins + cip;
 
-    // 6. Atualizar a Interface
-    document.getElementById('custoConsumoAgua').textContent = totalAgua.toFixed(2) + ' m³';
-    document.getElementById('custoConsumoEnergia').textContent = totalEnergia.toFixed(2) + ' kWh';
-    
-    document.getElementById('custoEstimadoAgua').textContent = 'R$ ' + custoTotalAgua.toFixed(2).replace('.', ',');
-    document.getElementById('custoEstimadoEnergia').textContent = 'R$ ' + custoTotalEnergia.toFixed(2).replace('.', ',');
+        breakdownEnergia = `
+            <p>Tarifa Fio (Consumo + TUSD + TUST + Bandeira): ${BRL(tarifaFio)}</p>
+            <p>ICMS (${(icmsEnergiaPct * 100).toFixed(2)}%): ${BRL(icms)}</p>
+            <p>PIS (${(pisEnergiaPct * 100).toFixed(2)}%): ${BRL(pis)}</p>
+            <p>COFINS (${(cofinsEnergiaPct * 100).toFixed(2)}%): ${BRL(cofins)}</p>
+            <p>CIP (Taxa Fixa): ${BRL(cip)}</p>
+            <p><strong>Total Estimado: ${BRL(custoEnergia)}</strong></p>
+        `;
+    }
+
+    document.getElementById('custoEstimadoAgua').textContent = BRL(custoAgua);
+    document.getElementById('custoEstimadoEnergia').textContent = BRL(custoEnergia);
+    document.getElementById('breakdownAgua').innerHTML = breakdownAgua;
+    document.getElementById('breakdownEnergia').innerHTML = breakdownEnergia;
 }
 
-// -------------------------------------------------------------
-// FIM NOVO BLOCO DE FUNÇÕES DE CÁLCULO DE CUSTO
-// -------------------------------------------------------------
 </script>
-
 </body>
 </html>
