@@ -1405,6 +1405,63 @@
                     Clique em "Gerar Ranking".
                 </div>
             </div>
+<!-- 💧 Card de Consumo Diário em Litros -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon" style="color: var(--primary);">🚰</div>
+    <div class="stat-label">Consumo Hoje - Água (Litros)</div>
+    <div class="stat-value" id="consumoHojeAguaLitros">0 L</div>
+  </div>
+</div>
+
+<!-- 🧮 Bloco Personalizado de Cálculo de Consumo -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <span class="material-icons">calculate</span>
+      <h2>Cálculo Personalizado de Consumo</h2>
+    </div>
+  </div>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Leitura Anterior Água (m³)</label>
+      <input type="number" id="calcLeituraAnteriorAgua" step="0.01" placeholder="Ex: 125.30" oninput="calcularConsumoPersonalizado()">
+    </div>
+    <div class="form-group">
+      <label>Leitura Atual Água (m³)</label>
+      <input type="number" id="calcLeituraAtualAgua" step="0.01" placeholder="Ex: 128.75" oninput="calcularConsumoPersonalizado()">
+    </div>
+    <div class="form-group">
+      <label>Leitura Anterior Energia (kWh)</label>
+      <input type="number" id="calcLeituraAnteriorEnergia" step="0.01" placeholder="Ex: 3420" oninput="calcularConsumoPersonalizado()">
+    </div>
+    <div class="form-group">
+      <label>Leitura Atual Energia (kWh)</label>
+      <input type="number" id="calcLeituraAtualEnergia" step="0.01" placeholder="Ex: 3485" oninput="calcularConsumoPersonalizado()">
+    </div>
+  </div>
+  <div style="margin-top: 20px; padding: 20px; background: var(--light); border-radius: 10px;">
+    <h3 style="font-size: 18px; margin-bottom: 15px; color: var(--text-color); display: flex; align-items: center; gap: 8px;">
+      <span class="material-icons" style="color: var(--primary);">water_drop</span>
+      Resultado do Cálculo
+    </h3>
+    <div class="stats-grid">
+      <div class="stat-card" style="background: var(--card-bg);">
+        <div class="stat-label">Consumo Água</div>
+        <div class="stat-value" id="calcResultAgua">0.00 m³</div>
+        <div class="stat-value" style="font-size: 18px; color: var(--primary);" id="calcResultAguaLitros">0 L</div>
+      </div>
+      <div class="stat-card" style="background: var(--card-bg);">
+        <div class="stat-label">Consumo Energia</div>
+        <div class="stat-value" id="calcResultEnergia">0.00 kWh</div>
+      </div>
+    </div>
+    <div class="alert alert-warning" style="margin-top: 15px; font-size: 13px;">
+      <span class="material-icons">info</span>
+      Este cálculo é apenas para visualização e não afeta os registros reais do sistema.
+    </div>
+  </div>
+</div>
             <div class="stat-card">
                 <div class="stat-icon" style="color: var(--accent);">⚡</div>
                 <div class="stat-label">Menores Consumos Energia</div>
@@ -2944,6 +3001,7 @@ function calcularCustoEstimado() {
     }
     document.getElementById('custoConsumoAgua').textContent = consumoAgua.toFixed(2) + ' m³';
     document.getElementById('custoConsumoEnergia').textContent = consumoEnergia.toFixed(2) + ' kWh';
+atualizarConsumoLitros();
     let custoAgua = 0;
     let custoEnergia = 0;
     let breakdownAgua = '';
@@ -3141,6 +3199,30 @@ function sincronizarCampos(e) {
             document.getElementById('matriculaEnergia').value = e.target.value;
         }
     }
+}
+// Atualiza o valor em litros do consumo diário (chamado em calcularEstatisticasGerais)
+function atualizarConsumoLitros() {
+  const consumoM3 = parseFloat(document.getElementById('consumoHojeAgua').textContent) || 0;
+  const consumoLitros = Math.round(consumoM3 * 1000);
+  document.getElementById('consumoHojeAguaLitros').textContent = consumoLitros.toLocaleString('pt-BR') + ' L';
+}
+
+// Função para cálculo personalizado em tempo real
+function calcularConsumoPersonalizado() {
+  // Água
+  const aguaAnt = parseFloat(document.getElementById('calcLeituraAnteriorAgua').value) || 0;
+  const aguaAtual = parseFloat(document.getElementById('calcLeituraAtualAgua').value) || 0;
+  const aguaConsumo = Math.max(0, aguaAtual - aguaAnt);
+  
+  // Energia
+  const eneAnt = parseFloat(document.getElementById('calcLeituraAnteriorEnergia').value) || 0;
+  const eneAtual = parseFloat(document.getElementById('calcLeituraAtualEnergia').value) || 0;
+  const eneConsumo = Math.max(0, eneAtual - eneAnt);
+
+  // Atualiza resultados
+  document.getElementById('calcResultAgua').textContent = aguaConsumo.toFixed(2) + ' m³';
+  document.getElementById('calcResultAguaLitros').textContent = Math.round(aguaConsumo * 1000).toLocaleString('pt-BR') + ' L';
+  document.getElementById('calcResultEnergia').textContent = eneConsumo.toFixed(2) + ' kWh';
 }
 </script>
 </body>
