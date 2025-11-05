@@ -126,6 +126,10 @@
         font-weight: 600;
         color: var(--text-color);
     }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
     .card {
         background: var(--card-bg);
         border-radius: 12px;
@@ -199,6 +203,30 @@
         color: var(--text-secondary);
         font-weight: 600;
         cursor: not-allowed;
+    }
+    .tooltip-custom {
+        position: relative;
+        cursor: help;
+    }
+    .tooltip-custom::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--dark);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        z-index: 1000;
+    }
+    .tooltip-custom:hover::after {
+        opacity: 1;
     }
     .btn {
         padding: 12px 24px;
@@ -760,6 +788,13 @@
                 <div class="status-value" id="pendingRecordsCount">0</div>
             </div>
         </div>
+        <div class="status-item" id="syncStatusIndicator" style="display: none;">
+            <span class="material-icons" style="color: var(--warning); animation: pulse 2s infinite;">sync_problem</span>
+            <div>
+                <div class="status-text">Atenção</div>
+                <div class="status-value" style="color: var(--warning);">Dados não sincronizados</div>
+            </div>
+        </div>
     </div>
     <div class="card">
         <div class="card-header">
@@ -856,7 +891,6 @@
                 </select>
             </div>
         </div>
-
         <!-- Campos de data para modo personalizado -->
         <div class="form-group" id="grupoDatasPersonalizadas" style="display: none;">
             <label>Data Início</label>
@@ -866,7 +900,6 @@
             <label>Data Fim</label>
             <input type="date" id="dataFimCusto" onchange="calcularCustoEstimado()">
         </div>
-
         <div style="background: var(--light); padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--text-color);">
                 <span class="material-icons" style="vertical-align: middle;">calculate</span>
@@ -1072,6 +1105,12 @@
             </div>
         </div>
         <form id="aguaForm" onsubmit="handleSubmit(event, 'agua')">
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="modoRapido" onchange="toggleModoRapido()" style="width: auto;">
+                    <span>⚡ Modo Rápido (mesmo nome/matrícula para ambos)</span>
+                </label>
+            </div>
             <div class="form-grid">
                 <div class="form-group">
                     <label>Nome Completo *</label>
@@ -1092,7 +1131,11 @@
                     <input type="number" id="leituraAnteriorAgua" step="0.01" readonly>
                 </div>
                 <div class="form-group">
-                    <label>Leitura Atual do Medidor (m³) *</label>
+                    <label>
+                        Leitura Atual do Medidor (m³) * 
+                        <span class="material-icons tooltip-custom" data-tooltip="Valor exibido no medidor de água" 
+                              style="font-size: 16px; vertical-align: middle; color: var(--primary);">help_outline</span>
+                    </label>
                     <input type="number" name="leituraAtual" id="leituraAtualAgua" step="0.01" required placeholder="0.00" oninput="calcularConsumo('agua')">
                 </div>
                 <div class="form-group">
@@ -1151,7 +1194,11 @@
                     <input type="number" id="leituraAnteriorEnergia" step="0.01" readonly>
                 </div>
                 <div class="form-group">
-                    <label>Leitura Atual do Medidor (kWh) *</label>
+                    <label>
+                        Leitura Atual do Medidor (kWh) * 
+                        <span class="material-icons tooltip-custom" data-tooltip="Valor exibido no medidor de energia" 
+                              style="font-size: 16px; vertical-align: middle; color: var(--accent);">help_outline</span>
+                    </label>
                     <input type="number" name="leituraAtual" id="leituraAtualEnergia" step="0.01" required placeholder="0.00" oninput="calcularConsumo('energia')">
                 </div>
                 <div class="form-group">
@@ -1288,6 +1335,10 @@
                 <span class="material-icons">delete_forever</span>
                 Limpar Todos os Registros Offline
             </button>
+            <button class="btn btn-secondary" onclick="exportarRegistrosOffline()">
+                <span class="material-icons">backup</span>
+                Exportar Backup Offline (JSON)
+            </button>
         </div>
         <div class="table-container">
             <table>
@@ -1313,58 +1364,56 @@
         </div>
         <div class="alert" id="syncAlert"></div>
     </div>
-    <!-- BLOCO DE RANKING DOS MENORES CONSUMOS -->
-<div class="card">
-    <div class="card-header">
-        <div class="card-title">
-            <span class="material-icons">leaderboard</span>
-            <h2>🏆 Ranking: Menores Consumos Diários</h2>
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <span class="material-icons">leaderboard</span>
+                <h2>🏆 Ranking: Menores Consumos Diários</h2>
+            </div>
+        </div>
+        <div class="filter-container">
+            <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--text-color);">
+                <span class="material-icons" style="vertical-align: middle; font-size: 20px;">date_range</span>
+                Selecione o Período para o Ranking
+            </h3>
+            <div class="filter-grid">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Data Início *</label>
+                    <input type="date" id="rankingDataInicio" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Data Fim *</label>
+                    <input type="date" id="rankingDataFim" required>
+                </div>
+            </div>
+            <div class="filter-buttons" style="margin-top: 15px;">
+                <button class="btn btn-primary" onclick="calcularRankingMenores()">
+                    <span class="material-icons">visibility</span>
+                    Gerar Ranking
+                </button>
+                <button class="btn btn-secondary" onclick="mostrarTodosNoRanking()">
+                    <span class="material-icons">list</span>
+                    Ver Todos os Registros
+                </button>
+            </div>
+        </div>
+        <div class="stats-grid" style="margin-top: 20px;">
+            <div class="stat-card">
+                <div class="stat-icon" style="color: var(--primary);">💧</div>
+                <div class="stat-label">Menores Consumos Água</div>
+                <div id="rankingAguaResult" style="text-align: left; padding: 10px; font-size: 14px; color: var(--text-color);">
+                    Clique em "Gerar Ranking".
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="color: var(--accent);">⚡</div>
+                <div class="stat-label">Menores Consumos Energia</div>
+                <div id="rankingEnergiaResult" style="text-align: left; padding: 10px; font-size: 14px; color: var(--text-color);">
+                    Clique em "Gerar Ranking".
+                </div>
+            </div>
         </div>
     </div>
-    <div class="filter-container">
-        <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--text-color);">
-            <span class="material-icons" style="vertical-align: middle; font-size: 20px;">date_range</span>
-            Selecione o Período para o Ranking
-        </h3>
-        <div class="filter-grid">
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Data Início *</label>
-                <input type="date" id="rankingDataInicio" required>
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Data Fim *</label>
-                <input type="date" id="rankingDataFim" required>
-            </div>
-        </div>
-        <div class="filter-buttons" style="margin-top: 15px;">
-            <button class="btn btn-primary" onclick="calcularRankingMenores()">
-                <span class="material-icons">visibility</span>
-                Gerar Ranking
-            </button>
-            <button class="btn btn-secondary" onclick="mostrarTodosNoRanking()">
-                <span class="material-icons">list</span>
-                Ver Todos os Registros
-            </button>
-        </div>
-    </div>
-
-    <div class="stats-grid" style="margin-top: 20px;">
-        <div class="stat-card">
-            <div class="stat-icon" style="color: var(--primary);">💧</div>
-            <div class="stat-label">Menores Consumos Água</div>
-            <div id="rankingAguaResult" style="text-align: left; padding: 10px; font-size: 14px; color: var(--text-color);">
-                Clique em "Gerar Ranking".
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="color: var(--accent);">⚡</div>
-            <div class="stat-label">Menores Consumos Energia</div>
-            <div id="rankingEnergiaResult" style="text-align: left; padding: 10px; font-size: 14px; color: var(--text-color);">
-                Clique em "Gerar Ranking".
-            </div>
-        </div>
-    </div>
-</div>
     <div class="card">
         <div class="card-header">
             <div class="card-title">
@@ -1448,6 +1497,8 @@
         </div>
     </div>
 </div>
+
+<!-- Modais -->
 <div id="editOnlineModal" class="modal">
     <div class="modal-content">
         <span class="close-btn" onclick="fecharModalEditOnline()">&times;</span>
@@ -1554,6 +1605,7 @@
         </form>
     </div>
 </div>
+
 <script>
 let scriptURL = '';
 let sheetID = '';
@@ -1568,12 +1620,22 @@ let sortDirection = {};
 let nomesUnicos = new Set();
 let matriculasUnicas = new Set();
 let nomeMatriculaMap = new Map();
+let dadosNaoSalvos = false;
+
 window.onload = function() {
     carregarConfiguracao();
     setDataHoraAtual();
     setInterval(atualizarRelogio, 1000);
     carregarTema();
     carregarFormulasSalvas();
+    // Monitorar alterações em formulários principais
+    document.querySelectorAll('input, select, textarea').forEach(input => {
+        if (!input.id.includes('edit') && !input.id.includes('filtro') && !input.id.includes('modoRapido')) {
+            input.addEventListener('input', () => {
+                dadosNaoSalvos = true;
+            });
+        }
+    });
     const nomeInputs = document.querySelectorAll('input[name="nome"]');
     const matriculaInputs = document.querySelectorAll('input[name="matricula"]');
     const ultimoNome = localStorage.getItem('ultimoNome') || '';
@@ -1595,11 +1657,10 @@ window.onload = function() {
     document.getElementById('dailyDataInicio').value = firstDay;
     document.getElementById('dailyDataFim').value = today;
     document.getElementById('mesEscolhido').value = mesAtual;
-
-    // Inicializa datas para modo personalizado de custo
     document.getElementById('dataInicioCusto').value = firstDay;
     document.getElementById('dataFimCusto').value = today;
-
+    document.getElementById('rankingDataInicio').value = firstDay;
+    document.getElementById('rankingDataFim').value = today;
     if (scriptURL && sheetID) {
         carregarDados();
     }
@@ -1613,6 +1674,16 @@ window.onload = function() {
         });
     });
 };
+
+window.addEventListener('beforeunload', (e) => {
+    const offlineRecords = JSON.parse(localStorage.getItem('offlineRecords') || '[]');
+    if (offlineRecords.length > 0 || dadosNaoSalvos) {
+        e.preventDefault();
+        e.returnValue = 'Você tem dados não sincronizados. Tem certeza que deseja sair?';
+        return e.returnValue;
+    }
+});
+
 function toggleTheme() {
     const currentTheme = document.documentElement.getAttribute('data-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -1631,6 +1702,7 @@ function toggleTheme() {
         atualizarGrafico();
     }
 }
+
 function carregarTema() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -1644,6 +1716,7 @@ function carregarTema() {
         text.textContent = 'Escuro';
     }
 }
+
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', function(e) {
         if (e.ctrlKey && e.key === 's') {
@@ -1660,6 +1733,7 @@ function setupKeyboardShortcuts() {
         }
     });
 }
+
 function inicializarAutocomplete() {
     const inputsNome = ['nomeAgua', 'nomeEnergia'];
     const inputsMatricula = ['matriculaAgua', 'matriculaEnergia'];
@@ -1682,6 +1756,7 @@ function inicializarAutocomplete() {
         }
     });
 }
+
 function mostrarAutocomplete(valor, tipo, autocompleteId, inputId, relatedInputId) {
     const autocompleteDiv = document.getElementById(autocompleteId);
     if (!autocompleteDiv) return;
@@ -1712,6 +1787,7 @@ function mostrarAutocomplete(valor, tipo, autocompleteId, inputId, relatedInputI
         autocompleteDiv.appendChild(div);
     });
 }
+
 function atualizarAutocomplete() {
     nomesUnicos.clear();
     matriculasUnicas.clear();
@@ -1725,16 +1801,19 @@ function atualizarAutocomplete() {
     });
     inicializarAutocomplete();
 }
+
 function setDataHoraAtual() {
     const now = new Date();
     const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     document.getElementById('dataHoraAgua').value = localDate;
     document.getElementById('dataHoraEnergia').value = localDate;
 }
+
 function atualizarRelogio() {
     const now = new Date();
     document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('pt-BR');
 }
+
 function carregarConfiguracao() {
     scriptURL = localStorage.getItem('scriptURL') || '';
     sheetID = localStorage.getItem('sheetID') || '';
@@ -1748,6 +1827,7 @@ function carregarConfiguracao() {
         document.getElementById('connectionStatus').style.color = 'var(--error)';
     }
 }
+
 function salvarConfiguracao() {
     const urlInput = document.getElementById('scriptURL').value.trim();
     const idInput = document.getElementById('sheetID').value.trim();
@@ -1770,6 +1850,7 @@ function salvarConfiguracao() {
         carregarDados();
     }
 }
+
 async function testarConexao() {
     if (!scriptURL || !sheetID) {
         mostrarAlerta('configAlert', 'Configure primeiro o sistema!', 'error');
@@ -1793,6 +1874,7 @@ async function testarConexao() {
         document.getElementById('connectionStatus').style.color = 'var(--error)';
     }
 }
+
 async function carregarDados() {
     await carregarHistorico();
     calcularEstatisticasGerais();
@@ -1802,6 +1884,7 @@ async function carregarDados() {
     calcularCustoEstimado();
     setTimeout(calcularRankingMenores, 300);
 }
+
 function calcularEstatisticasGerais() {
     let totalAguaLeitura = 0;
     let totalEnergiaLeitura = 0;
@@ -1843,6 +1926,7 @@ function calcularEstatisticasGerais() {
     calcularConsumo('agua');
     calcularConsumo('energia');
 }
+
 function calcularTendencia() {
     const hoje = new Date().toISOString().split('T')[0];
     const ontem = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -1851,6 +1935,7 @@ function calcularTendencia() {
     atualizarTrendIndicator('trendAgua', consumoHoje.agua, consumoOntem.agua, 'm³');
     atualizarTrendIndicator('trendEnergia', consumoHoje.energia, consumoOntem.energia, 'kWh');
 }
+
 function atualizarTrendIndicator(elementId, hoje, ontem, unidade) {
     const element = document.getElementById(elementId);
     if (!element) return;
@@ -1872,11 +1957,13 @@ function atualizarTrendIndicator(elementId, hoje, ontem, unidade) {
         element.innerHTML = '<span class="material-icons" style="font-size: 16px;">remove</span> Estável';
     }
 }
+
 function toYYYYMMDD(date) {
     const d = new Date(date);
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0];
 }
+
 function calcularConsumoDiarioPorData(dataString) {
     const registrosDoDia = todosRegistrosOnline
         .filter(r => toYYYYMMDD(r.dataHora) === dataString)
@@ -1897,6 +1984,7 @@ function calcularConsumoDiarioPorData(dataString) {
     }
     return { agua: consumoAgua, energia: consumoEnergia };
 }
+
 function calcularConsumoDiario() {
     const dataInicioStr = document.getElementById('dailyDataInicio').value;
     const dataFimStr = document.getElementById('dailyDataFim').value;
@@ -1932,6 +2020,7 @@ function calcularConsumoDiario() {
         </td></tr>`;
     }
 }
+
 async function carregarHistorico() {
     if (!scriptURL || !sheetID) {
         console.warn('Configuração ausente.');
@@ -1960,6 +2049,7 @@ async function carregarHistorico() {
         `;
     }
 }
+
 function renderizarHistorico(registros) {
     const tbody = document.getElementById('historicoBody');
     if (registros.length === 0) {
@@ -2001,6 +2091,7 @@ function renderizarHistorico(registros) {
     tbody.innerHTML = html;
     document.getElementById('totalRecords').textContent = todosRegistrosOnline.length.toString();
 }
+
 function toggleCustomDate() {
     const periodo = document.getElementById('filtroPeriodo').value;
     const inicio = document.getElementById('dataInicioGroup');
@@ -2013,6 +2104,7 @@ function toggleCustomDate() {
         fim.style.display = 'none';
     }
 }
+
 function aplicarFiltros() {
     const tipo = document.getElementById('filtroTipo').value;
     const periodo = document.getElementById('filtroPeriodo').value;
@@ -2049,9 +2141,11 @@ function aplicarFiltros() {
     }
     renderizarHistorico(registrosFiltrados);
 }
+
 function buscarRegistros() {
     aplicarFiltros();
 }
+
 function limparFiltros() {
     document.getElementById('filtroTipo').value = 'all';
     document.getElementById('filtroPeriodo').value = 'all';
@@ -2061,6 +2155,7 @@ function limparFiltros() {
     toggleCustomDate();
     aplicarFiltros();
 }
+
 function ordenarTabela(colIndex) {
     const tabela = document.getElementById('historicoTable');
     const th = tabela.tHead.rows[0].cells[colIndex];
@@ -2099,6 +2194,7 @@ function ordenarTabela(colIndex) {
     linhas.sort(comparador);
     linhas.forEach(row => tbody.appendChild(row));
 }
+
 function abrirModalEditOnline(rowId, tipo) {
     const registro = todosRegistrosOnline.find(r => r.rowId === rowId && r.tipo === tipo);
     if (!registro) {
@@ -2125,9 +2221,11 @@ function abrirModalEditOnline(rowId, tipo) {
     document.getElementById('editOnlineModal').style.display = 'block';
     mostrarAlerta('alertEditOnlineModal', '', '');
 }
+
 function fecharModalEditOnline() {
     document.getElementById('editOnlineModal').style.display = 'none';
 }
+
 function calcularConsumoModalOnline() {
     const tipo = document.getElementById('editOnlineTipo').value;
     const leituraAtualInput = document.getElementById('editOnlineLeituraAtual');
@@ -2138,6 +2236,7 @@ function calcularConsumoModalOnline() {
     const consumo = Math.max(0, leituraAtual - leituraAnterior);
     consumoTotalInput.value = consumo.toFixed(2);
 }
+
 async function salvarEdicaoOnline(event) {
     event.preventDefault();
     if (isProcessing || !scriptURL || !sheetID) return;
@@ -2185,6 +2284,7 @@ async function salvarEdicaoOnline(event) {
         isProcessing = false;
     }
 }
+
 async function deletarRegistroOnline(rowId, tipo) {
     if (!confirm(`Tem certeza que deseja excluir o registro ${rowId} de ${tipo.toUpperCase()}? Esta ação é irreversível!`)) {
         return;
@@ -2216,6 +2316,7 @@ async function deletarRegistroOnline(rowId, tipo) {
         isProcessing = false;
     }
 }
+
 function mostrarAlerta(id, mensagem, tipo) {
     const alertElement = document.getElementById(id);
     if (!alertElement) return;
@@ -2226,6 +2327,7 @@ function mostrarAlerta(id, mensagem, tipo) {
         alertElement.innerHTML = `<span class="material-icons">${tipo === 'success' ? 'check_circle' : (tipo === 'error' ? 'cancel' : 'warning')}</span> ${mensagem}`;
     }
 }
+
 function calcularConsumo(tipo) {
     const leituraAtualInput = document.getElementById(`leituraAtual${tipo === 'agua' ? 'Agua' : 'Energia'}`);
     const leituraAnteriorInput = document.getElementById(`leituraAnterior${tipo === 'agua' ? 'Agua' : 'Energia'}`);
@@ -2234,6 +2336,16 @@ function calcularConsumo(tipo) {
     const consumptionDisplay = document.getElementById(`consumptionDisplay${tipo === 'agua' ? 'Agua' : 'Energia'}`);
     const leituraAtual = parseFloat(leituraAtualInput.value) || 0;
     const leituraAnterior = parseFloat(leituraAnteriorInput.value) || 0;
+    if (leituraAtual < leituraAnterior) {
+        leituraAtualInput.setCustomValidity('A leitura atual não pode ser menor que a anterior!');
+        leituraAtualInput.style.borderColor = 'var(--error)';
+        consumoTotalInput.value = '0.00';
+        consumptionDisplay.style.display = 'none';
+        return;
+    } else {
+        leituraAtualInput.setCustomValidity('');
+        leituraAtualInput.style.borderColor = 'var(--border)';
+    }
     const consumo = Math.max(0, leituraAtual - leituraAnterior);
     consumoTotalInput.value = consumo.toFixed(2);
     consumptionValueDiv.textContent = consumo.toFixed(2) + (tipo === 'agua' ? ' m³' : ' kWh');
@@ -2244,18 +2356,23 @@ function calcularConsumo(tipo) {
     }
     calcularCustoEstimado(); 
 }
+
 function carregarRegistrosPendentes() {
     const offlineRecords = JSON.parse(localStorage.getItem('offlineRecords') || '[]');
     todosRegistrosOffline = offlineRecords;
     document.getElementById('pendingRecordsCount').textContent = offlineRecords.length.toString();
     const pendingCard = document.getElementById('pendingRecordsCard');
+    const syncIndicator = document.getElementById('syncStatusIndicator');
     if (offlineRecords.length > 0) {
         pendingCard.style.display = 'block';
+        if (syncIndicator) syncIndicator.style.display = 'flex';
     } else {
         pendingCard.style.display = 'none';
+        if (syncIndicator) syncIndicator.style.display = 'none';
     }
     aplicarFiltrosOffline();
 }
+
 function aplicarFiltrosOffline() {
     let registros = todosRegistrosOffline;
     const tipo = document.getElementById('filtroTipoOffline').value;
@@ -2292,6 +2409,7 @@ function aplicarFiltrosOffline() {
     });
     tbody.innerHTML = html;
 }
+
 function abrirModalEdicaoOffline(index) {
     const reg = todosRegistrosOffline[index];
     if (!reg) return;
@@ -2315,9 +2433,11 @@ function abrirModalEdicaoOffline(index) {
     document.getElementById('editModal').style.display = 'block';
     mostrarAlerta('alertEditModal', '', ''); 
 }
+
 function fecharModal() {
     document.getElementById('editModal').style.display = 'none';
 }
+
 function calcularConsumoModal() {
     const tipo = document.getElementById('editTipo').value;
     const leituraAtualInput = document.getElementById('editLeituraAtual');
@@ -2328,6 +2448,7 @@ function calcularConsumoModal() {
     const consumo = Math.max(0, leituraAtual - leituraAnterior);
     consumoTotalInput.value = consumo.toFixed(2);
 }
+
 function salvarEdicao(event) {
     event.preventDefault();
     const index = parseInt(document.getElementById('editIndex').value, 10);
@@ -2358,6 +2479,7 @@ function salvarEdicao(event) {
         mostrarAlerta('alertEditModal', 'Erro ao encontrar o registro.', 'error');
     }
 }
+
 function deletarRegistroOffline(index) {
     if (confirm("Tem certeza que deseja remover este registro offline?")) {
         todosRegistrosOffline.splice(index, 1);
@@ -2365,6 +2487,7 @@ function deletarRegistroOffline(index) {
         carregarRegistrosPendentes();
     }
 }
+
 async function sincronizarRegistrosPendentes() {
     if (!scriptURL || !sheetID || todosRegistrosOffline.length === 0) {
         mostrarAlerta('syncAlert', 'Nenhum registro para sincronizar ou configuração ausente.', 'warning');
@@ -2419,6 +2542,7 @@ async function sincronizarRegistrosPendentes() {
     carregarRegistrosPendentes();
     await carregarDados();
 }
+
 function limparTodosRegistrosOffline() {
     if (confirm("ATENÇÃO: Você tem certeza que deseja APAGAR TODOS os registros offline? Esta ação é irreversível e pode causar perda de dados não sincronizados!")) {
         localStorage.removeItem('offlineRecords');
@@ -2426,6 +2550,24 @@ function limparTodosRegistrosOffline() {
         mostrarAlerta('syncAlert', 'Todos os registros offline foram removidos.', 'success');
     }
 }
+
+function exportarRegistrosOffline() {
+    const offlineRecords = JSON.parse(localStorage.getItem('offlineRecords') || '[]');
+    if (offlineRecords.length === 0) {
+        mostrarAlerta('syncAlert', 'Nenhum registro offline para exportar.', 'warning');
+        return;
+    }
+    const dataStr = JSON.stringify(offlineRecords, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `backup_offline_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    mostrarAlerta('syncAlert', `✅ Backup de ${offlineRecords.length} registro(s) exportado com sucesso!`, 'success');
+}
+
 async function handleSubmit(event, tipo) {
     event.preventDefault();
     if (isProcessing) return;
@@ -2470,6 +2612,7 @@ async function handleSubmit(event, tipo) {
             mostrarAlerta(alertId, `✅ Registro de ${tipo} enviado com sucesso!`, 'success');
             form.reset();
             setDataHoraAtual();
+            dadosNaoSalvos = false;
             await carregarDados();
         } else {
             throw new Error(data.message || 'Erro desconhecido');
@@ -2484,6 +2627,7 @@ async function handleSubmit(event, tipo) {
         isProcessing = false;
     }
 }
+
 function salvarRegistroOffline(dados, btn, alertId) {
     const offlineRecords = JSON.parse(localStorage.getItem('offlineRecords') || '[]');
     offlineRecords.push(dados);
@@ -2496,12 +2640,14 @@ function salvarRegistroOffline(dados, btn, alertId) {
     setDataHoraAtual();
     carregarRegistrosPendentes();
 }
+
 function trocarGrafico(tipo) {
     currentChartType = tipo;
     document.querySelectorAll('.chart-tab').forEach(tab => tab.classList.remove('active'));
     document.querySelector(`.chart-tab[onclick="trocarGrafico('${tipo}')"]`).classList.add('active');
     atualizarGrafico();
 }
+
 function atualizarGrafico() {
     if (!todosRegistrosOnline.length) {
         document.getElementById('consumptionChart').innerHTML = '';
@@ -2603,6 +2749,7 @@ function atualizarGrafico() {
         });
     }
 }
+
 function exportarGrafico() {
     if (!currentChart) {
         mostrarAlerta('configAlert', 'Nenhum gráfico para exportar!', 'error');
@@ -2617,6 +2764,7 @@ function exportarGrafico() {
     a.click();
     document.body.removeChild(a);
 }
+
 function atualizarRelatorio() {
     const periodo = document.getElementById('relatorioPeriodo').value;
     let registrosFiltrados = todosRegistrosOnline;
@@ -2654,6 +2802,7 @@ function atualizarRelatorio() {
     document.getElementById('relatorioMediaAgua').textContent = mediaAgua.toFixed(2) + ' m³/dia';
     document.getElementById('relatorioMediaEnergia').textContent = mediaEnergia.toFixed(2) + ' kWh/dia';
 }
+
 function exportarCSV() {
     const header = ["Tipo", "Data/Hora", "Nome", "Matrícula", "Leitura Anterior", "Leitura Atual", "Consumo", "Extra 1", "Extra 2", "Extra 3"];
     let csvContent = header.join(";") + "\n";
@@ -2683,6 +2832,7 @@ function exportarCSV() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 }
+
 function gerarRelatorioPDF() {
     const { jsPDF } = window.jspdf;
     window.scrollTo(0, 0);
@@ -2697,6 +2847,7 @@ function gerarRelatorioPDF() {
         pdf.save(`relatorio_consumo_${new Date().toISOString().split('T')[0]}.pdf`);
     });
 }
+
 function carregarFormulasSalvas() {
     const formulaSalva = localStorage.getItem('formulaEscolhida') || 'simples';
     document.querySelector(`input[name="formulaEscolhida"][value="${formulaSalva}"]`).checked = true;
@@ -2719,6 +2870,7 @@ function carregarFormulasSalvas() {
         document.getElementById('parametrosDetalhados').style.display = 'none';
     }
 }
+
 function salvarFormulaEscolhida() {
     const formula = document.querySelector('input[name="formulaEscolhida"]:checked').value;
     localStorage.setItem('formulaEscolhida', formula);
@@ -2737,6 +2889,7 @@ function salvarFormulaEscolhida() {
     localStorage.setItem('cipEnergia', document.getElementById('cipEnergia').value);
     mostrarAlerta('configAlert', 'Fórmulas e Parâmetros salvos com sucesso!', 'success');
 }
+
 function alterarTipoCalculo() {
     const tipo = document.getElementById('tipoCalculo').value;
     document.getElementById('seletorPeriodo').style.display = tipo === 'dias' ? 'block' : 'none';
@@ -2744,18 +2897,14 @@ function alterarTipoCalculo() {
     calcularCustoEstimado();
 }
 
-// 🔥 FUNÇÃO ATUALIZADA: calcularCustoEstimado com suporte a intervalo personalizado
 function calcularCustoEstimado() {
     const tipoCalculo = document.getElementById('tipoCalculo').value;
     const periodo = document.getElementById('periodoCalculo').value;
     let consumoAgua = 0;
     let consumoEnergia = 0;
-
-    // Mostrar/ocultar campos de data personalizada
     const isCustom = periodo === 'custom-range';
     document.getElementById('grupoDatasPersonalizadas').style.display = isCustom ? 'block' : 'none';
     document.getElementById('grupoDatasPersonalizadasFim').style.display = isCustom ? 'block' : 'none';
-
     if (isCustom) {
         const inicioStr = document.getElementById('dataInicioCusto').value;
         const fimStr = document.getElementById('dataFimCusto').value;
@@ -2767,7 +2916,6 @@ function calcularCustoEstimado() {
                     const rDate = new Date(r.dataHora);
                     return rDate >= inicio && rDate <= fim;
                 });
-
                 const leiturasAgua = registrosNoPeriodo
                     .filter(r => r.tipo === 'agua')
                     .map(r => parseFloat(r.leituraAtual))
@@ -2776,7 +2924,6 @@ function calcularCustoEstimado() {
                     .filter(r => r.tipo === 'energia')
                     .map(r => parseFloat(r.leituraAtual))
                     .filter(l => !isNaN(l));
-
                 if (leiturasAgua.length > 0) {
                     consumoAgua = Math.max(0, Math.max(...leiturasAgua) - Math.min(...leiturasAgua));
                 }
@@ -2786,7 +2933,6 @@ function calcularCustoEstimado() {
             }
         }
     } else {
-        // Comportamento original para outros períodos
         if (tipoCalculo === 'dias') {
             const consumoPeriodo = calcularConsumoNoPeriodo(periodo);
             consumoAgua = consumoPeriodo.agua;
@@ -2796,19 +2942,14 @@ function calcularCustoEstimado() {
             consumoEnergia = 250.00;
         }
     }
-
     document.getElementById('custoConsumoAgua').textContent = consumoAgua.toFixed(2) + ' m³';
     document.getElementById('custoConsumoEnergia').textContent = consumoEnergia.toFixed(2) + ' kWh';
-
-    // Cálculo de custo (mantido igual)
     let custoAgua = 0;
     let custoEnergia = 0;
     let breakdownAgua = '';
     let breakdownEnergia = '';
     const BRL = (valor) => `R$ ${valor.toFixed(2).replace('.', ',')}`;
     const formula = document.querySelector('input[name="formulaEscolhida"]:checked').value;
-
-    // --- CÁLCULO ÁGUA ---
     const tarifaAgua = parseFloat(document.getElementById('tarifaAgua').value) || 0;
     const taxaEsgotoPct = parseFloat(document.getElementById('taxaEsgoto').value) || 0;
     if (formula === 'simples') {
@@ -2839,8 +2980,6 @@ function calcularCustoEstimado() {
             <p><strong>Total Estimado: ${BRL(custoAgua)}</strong></p>
         `;
     }
-
-    // --- CÁLCULO ENERGIA ---
     const tarifaEnergia = parseFloat(document.getElementById('tarifaEnergia').value) || 0;
     if (formula === 'simples') {
         const icmsEnergiaPct = (parseFloat(document.getElementById('icmsEnergia').value) || 0) / 100;
@@ -2876,7 +3015,6 @@ function calcularCustoEstimado() {
             <p><strong>Total Estimado: ${BRL(custoEnergia)}</strong></p>
         `;
     }
-
     document.getElementById('custoEstimadoAgua').textContent = BRL(custoAgua);
     document.getElementById('custoEstimadoEnergia').textContent = BRL(custoEnergia);
     document.getElementById('breakdownAgua').innerHTML = breakdownAgua;
@@ -2916,7 +3054,7 @@ function calcularConsumoNoPeriodo(periodo) {
     }
     return { agua: totalConsumoAgua, energia: totalConsumoEnergia, dias: diasNoPeriodo };
 }
-// Inicializa datas padrão no ranking
+
 window.addEventListener('load', () => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -2928,20 +3066,17 @@ window.addEventListener('load', () => {
 function calcularRankingMenores() {
     const inicioStr = document.getElementById('rankingDataInicio').value;
     const fimStr = document.getElementById('rankingDataFim').value;
-    
     if (!inicioStr || !fimStr) {
         alert('Selecione ambas as datas.');
         return;
     }
-
     const inicio = new Date(inicioStr);
     const fim = new Date(fimStr);
     if (inicio > fim) {
         alert('A data de início não pode ser maior que a data de fim.');
         return;
     }
-
-    // Agrupa consumo por dia
+    const diasNoPeriodo = Math.ceil((fim - inicio) / (1000 * 60 * 60 * 24)) + 1;
     const consumoPorDia = {};
     todosRegistrosOnline.forEach(reg => {
         const dia = toYYYYMMDD(reg.dataHora);
@@ -2953,29 +3088,28 @@ function calcularRankingMenores() {
             consumoPorDia[dia][reg.tipo] += parseFloat(reg.consumoTotal) || 0;
         }
     });
-
-    // Converte para array e ordena
     const diasAgua = Object.entries(consumoPorDia)
         .filter(([dia, c]) => c.agua > 0)
         .map(([dia, c]) => ({ dia, consumo: c.agua }))
         .sort((a, b) => a.consumo - b.consumo);
-
     const diasEnergia = Object.entries(consumoPorDia)
         .filter(([dia, c]) => c.energia > 0)
         .map(([dia, c]) => ({ dia, consumo: c.energia }))
         .sort((a, b) => a.consumo - b.consumo);
-
-    // Mostra os 3 menores ou todos se solicitado
     const mostrarTodos = window.mostrarTodosRanking || false;
     const limite = mostrarTodos ? Infinity : 3;
-
     const renderizar = (dados, unidade) => {
-        if (dados.length === 0) return '<p style="color: #999;">Nenhum dado disponível.</p>';
-        return dados.slice(0, limite).map(d => 
-            `${new Date(d.dia).toLocaleDateString('pt-BR')}: <strong>${d.consumo.toFixed(2)} ${unidade}</strong>`
-        ).join('<br>');
+        if (dados.length === 0) return '<p style="color: #999;">Nenhum dado disponível no período.</p>';
+        const totalConsumo = dados.reduce((sum, d) => sum + d.consumo, 0);
+        const mediaConsumo = totalConsumo / diasNoPeriodo;
+        let html = dados.slice(0, limite).map((d, i) => {
+            const emoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '📊';
+            return `${emoji} ${new Date(d.dia).toLocaleDateString('pt-BR')}: <strong>${d.consumo.toFixed(2)} ${unidade}</strong>`;
+        }).join('<br>');
+        html += `<hr style="margin: 10px 0; border: 1px solid var(--border);">`;
+        html += `<p style="font-size: 12px; color: var(--text-secondary);">📊 Média diária: <strong>${mediaConsumo.toFixed(2)} ${unidade}</strong></p>`;
+        return html;
     };
-
     document.getElementById('rankingAguaResult').innerHTML = renderizar(diasAgua, 'm³');
     document.getElementById('rankingEnergiaResult').innerHTML = renderizar(diasEnergia, 'kWh');
 }
@@ -2983,8 +3117,30 @@ function calcularRankingMenores() {
 function mostrarTodosNoRanking() {
     window.mostrarTodosRanking = true;
     calcularRankingMenores();
-    // Opcional: resetar após uso
     setTimeout(() => { window.mostrarTodosRanking = false; }, 100);
+}
+
+function toggleModoRapido() {
+    const ativo = document.getElementById('modoRapido').checked;
+    if (ativo) {
+        document.getElementById('nomeEnergia').value = document.getElementById('nomeAgua').value;
+        document.getElementById('matriculaEnergia').value = document.getElementById('matriculaAgua').value;
+        document.getElementById('nomeAgua').addEventListener('input', sincronizarCampos);
+        document.getElementById('matriculaAgua').addEventListener('input', sincronizarCampos);
+    } else {
+        document.getElementById('nomeAgua').removeEventListener('input', sincronizarCampos);
+        document.getElementById('matriculaAgua').removeEventListener('input', sincronizarCampos);
+    }
+}
+
+function sincronizarCampos(e) {
+    if (document.getElementById('modoRapido').checked) {
+        if (e.target.id === 'nomeAgua') {
+            document.getElementById('nomeEnergia').value = e.target.value;
+        } else if (e.target.id === 'matriculaAgua') {
+            document.getElementById('matriculaEnergia').value = e.target.value;
+        }
+    }
 }
 </script>
 </body>
