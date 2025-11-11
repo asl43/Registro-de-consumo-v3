@@ -1471,6 +1471,80 @@
             </div>
         </div>
     </div>
+<!-- 📄 Seção de Lançamento de Faturas -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span class="material-icons">receipt</span>
+            <h2>Lançamento de Faturas Oficiais</h2>
+        </div>
+    </div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Data Início (período cobrado) *</label>
+            <input type="date" id="faturaDataInicio" required>
+        </div>
+        <div class="form-group">
+            <label>Data Fim (período cobrado) *</label>
+            <input type="date" id="faturaDataFim" required>
+        </div>
+        <div class="form-group">
+            <label>Consumo Água (m³)</label>
+            <input type="number" id="faturaConsumoAgua" step="0.01" placeholder="Ex: 12.50">
+        </div>
+        <div class="form-group">
+            <label>Valor Pago Água (R$)</label>
+            <input type="number" id="faturaValorAgua" step="0.01" placeholder="Ex: 85.30">
+        </div>
+        <div class="form-group">
+            <label>Consumo Energia (kWh)</label>
+            <input type="number" id="faturaConsumoEnergia" step="0.01" placeholder="Ex: 210.00">
+        </div>
+        <div class="form-group">
+            <label>Valor Pago Energia (R$)</label>
+            <input type="number" id="faturaValorEnergia" step="0.01" placeholder="Ex: 156.70">
+        </div>
+        <div class="form-group">
+            <label>Observações (opcional)</label>
+            <textarea id="faturaObservacoes" rows="2" placeholder="Ex: Bandeira vermelha, taxa de iluminação, etc."></textarea>
+        </div>
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-top: 20px;" onclick="salvarFatura()">
+        <span class="material-icons">save</span>
+        Salvar Fatura
+    </button>
+    <div class="alert" id="alertFatura"></div>
+</div>
+
+<!-- 📋 Histórico de Faturas Salvas -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span class="material-icons">history</span>
+            <h2>Histórico de Faturas Lançadas</h2>
+        </div>
+    </div>
+    <div class="table-container">
+        <table id="faturasTable">
+            <thead>
+                <tr>
+                    <th>Período</th>
+                    <th>Água (m³ / R$)</th>
+                    <th>Energia (kWh / R$)</th>
+                    <th>Observações</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="faturasBody">
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
+                        Nenhuma fatura lançada ainda.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
     <div class="card">
         <div class="card-header">
             <div class="card-title">
@@ -3224,7 +3298,121 @@ function calcularConsumoPersonalizado() {
   document.getElementById('calcResultAguaLitros').textContent = Math.round(aguaConsumo * 1000).toLocaleString('pt-BR') + ' L';
   document.getElementById('calcResultEnergia').textContent = eneConsumo.toFixed(2) + ' kWh';
 }
+// Carrega faturas salvas ao iniciar
+window.addEventListener('load', () => {
+    carregarFaturas();
+});
+
+function salvarFatura() {
+    const inicio = document.getElementById('faturaDataInicio').value;
+    const fim = document.getElementById('faturaDataFim').value;
+    const aguaCons = document.getElementById('faturaConsumoAgua').value;
+    const aguaValor = document.getElementById('faturaValorAgua').value;
+    const energiaCons = document.getElementById('faturaConsumoEnergia').value;
+    const energiaValor = document.getElementById('faturaValorEnergia').value;
+    const obs = document.getElementById('faturaObservacoes').value;
+
+    if (!inicio || !fim) {
+        mostrarAlerta('alertFatura', 'Informe as datas de início e fim.', 'error');
+        return;
+    }
+
+    if (new Date(inicio) > new Date(fim)) {
+        mostrarAlerta('alertFatura', 'A data de início não pode ser maior que a data de fim.', 'error');
+        return;
+    }
+
+    const fatura = {
+        id: Date.now().toString(),
+        dataInicio: inicio,
+        dataFim: fim,
+        consumoAgua: aguaCons || '0',
+        valorAgua: aguaValor || '0',
+        consumoEnergia: energiaCons || '0',
+        valorEnergia: energiaValor || '0',
+        observacoes: obs
+    };
+
+    const faturas = JSON.parse(localStorage.getItem('faturas') || '[]');
+    faturas.push(fatura);
+    localStorage.setItem('faturas', JSON.stringify(faturas));
+
+    mostrarAlerta('alertFatura', 'Fatura salva com sucesso!', 'success');
+    document.getElementById('faturaDataInicio').value = '';
+    document.getElementById('faturaDataFim').value = '';
+    document.getElementById('faturaConsumoAgua').value = '';
+    document.getElementById('faturaValorAgua').value = '';
+    document.getElementById('faturaConsumoEnergia').value = '';
+    document.getElementById('faturaValorEnergia').value = '';
+    document.getElementById('faturaObservacoes').value = '';
+
+    carregarFaturas();
+}
+
+function carregarFaturas() {
+    const faturas = JSON.parse(localStorage.getItem('faturas') || '[]');
+    const tbody = document.getElementById('faturasBody');
+
+    if (faturas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 40px; color: #999;">Nenhuma fatura lançada ainda.</td></tr>`;
+        return;
+    }
+
+    // Ordena por data de fim (mais recente primeiro)
+    faturas.sort((a, b) => new Date(b.dataFim) - new Date(a.dataFim));
+
+    let html = '';
+    faturas.forEach(f => {
+        html += `
+            <tr>
+                <td>${new Date(f.dataInicio).toLocaleDateString('pt-BR')} – ${new Date(f.dataFim).toLocaleDateString('pt-BR')}</td>
+                <td>${parseFloat(f.consumoAgua || 0).toFixed(2)} m³ / R$ ${parseFloat(f.valorAgua || 0).toFixed(2)}</td>
+                <td>${parseFloat(f.consumoEnergia || 0).toFixed(2)} kWh / R$ ${parseFloat(f.valorEnergia || 0).toFixed(2)}</td>
+                <td>${f.observacoes || '—'}</td>
+                <td>
+                    <button class="btn btn-edit btn-icon" onclick="editarFatura('${f.id}')" title="Editar">
+                        <span class="material-icons">edit</span>
+                    </button>
+                    <button class="btn btn-danger btn-icon" onclick="excluirFatura('${f.id}')" title="Excluir">
+                        <span class="material-icons">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+function editarFatura(id) {
+    const faturas = JSON.parse(localStorage.getItem('faturas') || '[]');
+    const fatura = faturas.find(f => f.id === id);
+    if (!fatura) return;
+
+    // Preenche os campos
+    document.getElementById('faturaDataInicio').value = fatura.dataInicio;
+    document.getElementById('faturaDataFim').value = fatura.dataFim;
+    document.getElementById('faturaConsumoAgua').value = fatura.consumoAgua;
+    document.getElementById('faturaValorAgua').value = fatura.valorAgua;
+    document.getElementById('faturaConsumoEnergia').value = fatura.consumoEnergia;
+    document.getElementById('faturaValorEnergia').value = fatura.valorEnergia;
+    document.getElementById('faturaObservacoes').value = fatura.observacoes;
+
+    // Remove a fatura antiga
+    const novasFaturas = faturas.filter(f => f.id !== id);
+    localStorage.setItem('faturas', JSON.stringify(novasFaturas));
+    carregarFaturas();
+    mostrarAlerta('alertFatura', 'Fatura carregada para edição. Salve novamente para atualizar.', 'warning');
+}
+
+function excluirFatura(id) {
+    if (!confirm('Tem certeza que deseja excluir esta fatura?')) return;
+
+    const faturas = JSON.parse(localStorage.getItem('faturas') || '[]');
+    const novasFaturas = faturas.filter(f => f.id !== id);
+    localStorage.setItem('faturas', JSON.stringify(novasFaturas));
+    carregarFaturas();
+    mostrarAlerta('alertFatura', 'Fatura excluída.', 'success');
+}
 </script>
 </body>
 </html>
-
